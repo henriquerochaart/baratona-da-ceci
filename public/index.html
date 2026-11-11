@@ -169,7 +169,40 @@ a{color:inherit}
 </style>
 </head>
 <body>
-__DEFS__
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="estrela" viewBox="0 0 60 60">
+      <path d="M30 4L36.5 22.5 56 23.5 40.5 35.5 46 54.5 30 43.5 14 54.5 19.5 35.5 4 23.5 23.5 22.5Z" fill="currentColor" stroke="#2A1D22" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M30 14L33.5 25" stroke="#FCF6EA" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>
+    </symbol>
+    <symbol id="brilho" viewBox="0 0 40 40">
+      <path d="M20 2C21.5 14 26 18.5 38 20 26 21.5 21.5 26 20 38 18.5 26 14 21.5 2 20 14 18.5 18.5 14 20 2Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="coracao" viewBox="0 0 40 36">
+      <path d="M20 33C8 24 3 17 4.5 10.5 6 4.5 13.5 2.5 20 9.5 26.5 2 34.5 4.5 35.5 11 36.5 17.5 31 24 20 33Z" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="cerejas" viewBox="0 0 100 110">
+      <path d="M50 22Q40 52 28 78M50 22Q62 50 72 84" fill="none" stroke="#1E6B47" stroke-width="5" stroke-linecap="round"/>
+      <path d="M50 22Q30 4 22 18Q30 30 50 22Q70 30 78 16Q70 2 50 22Z" fill="#F49AC2" stroke="#2A1D22" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M48 24L40 44M52 24L60 42" stroke="#F49AC2" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="50" cy="22" r="5" fill="#E43F86" stroke="#2A1D22" stroke-width="2"/>
+      <circle cx="27" cy="86" r="17" fill="#D3213C" stroke="#2A1D22" stroke-width="3"/>
+      <circle cx="73" cy="90" r="17" fill="#D3213C" stroke="#2A1D22" stroke-width="3"/>
+      <ellipse cx="21" cy="80" rx="5" ry="3.5" fill="#FCF6EA" opacity=".85" transform="rotate(-30 21 80)"/>
+      <ellipse cx="67" cy="84" rx="5" ry="3.5" fill="#FCF6EA" opacity=".85" transform="rotate(-30 67 84)"/>
+    </symbol>
+    <pattern id="espelhos" width="12" height="12" patternUnits="userSpaceOnUse">
+      <rect width="12" height="12" fill="#26338A"/><rect width="6" height="6" fill="#F49AC2"/><rect x="6" y="6" width="6" height="6" fill="#FCF6EA"/><rect x="6" width="6" height="6" fill="#8E7FC2"/>
+      <path d="M0 0H12V12" fill="none" stroke="#2A1D22" stroke-width=".8" opacity=".5"/>
+    </pattern>
+    <symbol id="globo" viewBox="0 0 100 112">
+      <path d="M50 0V14" stroke="#2A1D22" stroke-width="2.5"/>
+      <circle cx="50" cy="62" r="46" fill="url(#espelhos)" stroke="#2A1D22" stroke-width="3"/>
+      <ellipse cx="34" cy="44" rx="12" ry="8" fill="#FCF6EA" opacity=".7" transform="rotate(-30 34 44)"/>
+      <path d="M50 16Q22 62 50 108M50 16Q78 62 50 108M6 62H94" fill="none" stroke="#2A1D22" stroke-width="1.2" opacity=".35"/>
+    </symbol>
+  </defs>
+</svg>
 
 <div class="wrap">
 
