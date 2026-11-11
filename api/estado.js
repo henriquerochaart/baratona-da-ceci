@@ -1,35 +1,44 @@
-import { estado, validVoter } from "./_store.js";
+import { estado } from "./_store.js";
+import { quem, PRAZO, votacaoAberta, CHECKIN_ABRE, checkinAberto } from "./_auth.js";
 
 export default async function handler(req, res) {
   try {
-    const { votos, sugestoes, presenca } = await estado();
-    const voter = validVoter(req.query?.voter) ? req.query.voter : null;
+    const { votos, sugestoes, presenca, perfil, checkins } = await estado();
+    const eu = quem(req.query?.token);
+    const nomeDe = (id) => perfil[id]?.nome || quem(id)?.nome || "";
     const pontos = {};
     let votantes = 0;
-    for (const d of Object.values(votos)) {
+    for (const [id, d] of Object.entries(votos)) {
+      if (!quem(id)) continue;
       let algum = false;
       for (const [k, x] of Object.entries(d?.v || {})) if (x === 1 || x === -1) { pontos[k] = (pontos[k] || 0) + x; algum = true; }
       if (algum) votantes++;
     }
     const sug = [];
     for (const [autor, d] of Object.entries(sugestoes)) {
-      for (const it of Array.isArray(d?.itens) ? d.itens : []) {
-        sug.push({ id: it.id, nome: it.nome, end: it.end || "", lat: it.lat ?? null, lon: it.lon ?? null, at: it.at || "", por: d.nome || "", meu: autor === voter });
-      }
+      if (!quem(autor)) continue;
+      for (const it of Array.isArray(d?.itens) ? d.itens : [])
+        sug.push({ id: it.id, nome: it.nome, end: it.end || "", lat: it.lat ?? null, lon: it.lon ?? null, at: it.at || "", por: nomeDe(autor) });
     }
     sug.sort((a, b) => String(a.at).localeCompare(String(b.at)));
     const confirmados = Object.entries(presenca)
-      .filter(([, d]) => d?.vai === true && d?.nome)
-      .map(([id, d]) => ({ nome: d.nome, at: d.at || "", eu: id === voter }))
-      .sort((a, b) => String(a.at).localeCompare(String(b.at)));
-    const meu = voter ? {
-      v: votos[voter]?.v || {},
-      vai: presenca[voter]?.vai === true,
-      nome: presenca[voter]?.nome || sugestoes[voter]?.nome || "",
-      sugestoes: sugestoes[voter]?.itens || [],
+      .filter(([id, d]) => d?.vai === true && quem(id))
+      .sort((a, b) => String(a[1].at).localeCompare(String(b[1].at)))
+      .map(([id]) => ({ nome: nomeDe(id) || "Convidado", eu: eu?.token === id }));
+    const placar = Object.entries(checkins)
+      .filter(([id]) => quem(id))
+      .map(([id, d]) => ({ nome: nomeDe(id) || "Convidado", total: Array.isArray(d?.lista) ? d.lista.length : 0, eu: eu?.token === id }))
+      .filter((p) => p.total > 0)
+      .sort((a, b) => b.total - a.total);
+    const meu = eu ? {
+      nome: nomeDe(eu.token),
+      v: votos[eu.token]?.v || {},
+      vai: presenca[eu.token]?.vai === true,
+      checkins: checkins[eu.token]?.lista || [],
     } : null;
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ pontos, votantes, sugestoes: sug, confirmados: confirmados.map(({ nome, eu }) => ({ nome, eu })), meu });
+    res.status(200).json({ pontos, votantes, sugestoes: sug, confirmados, placar, meu,
+      prazo: PRAZO, votacaoAberta: votacaoAberta(), checkinAbre: CHECKIN_ABRE, checkinAberto: checkinAberto() });
   } catch (e) {
     res.status(500).json({ erro: "Não deu para carregar agora." });
   }

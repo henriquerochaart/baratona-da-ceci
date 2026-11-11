@@ -6,8 +6,8 @@
 <title>Baratona da Ceci</title>
 <meta property="og:title" content="Baratona da Ceci!!!">
 <meta property="og:description" content="28/11 · 14h · Rua dos Pinheiros, 1057">
-<meta property="og:image" content="/arte.webp">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<meta property="og:image" content="/arte/logo.webp">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Shrikhand&family=Caveat:wght@600;700&family=Special+Elite&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap">
 <style>
@@ -121,6 +121,87 @@ a{color:inherit}
 .bar .thumb .pos{position:absolute;right:-8px;top:-8px;min-width:24px;height:24px;border-radius:12px;background:var(--vermelho);color:var(--papel-2);font:700 12px var(--f-body);display:grid;place-items:center;padding:0 5px;border:2px solid var(--papel-2)}
 .bar.sug .thumb{background-color:var(--sol);border-style:dashed}
 
+/* CABEÇALHO E ADESIVOS */
+.topo{position:relative;padding-top:18px;display:flex;justify-content:center}
+.topo .logo{display:block;width:min(100%,460px);height:auto;position:relative;z-index:2;transform:rotate(-2deg);filter:drop-shadow(0 6px 10px rgba(42,29,34,.18))}
+.ad{position:absolute;pointer-events:none;height:auto;filter:drop-shadow(0 4px 6px rgba(42,29,34,.18));z-index:0}
+.faixa{position:relative;height:120px;margin:-20px 0}
+.foto{display:block;height:auto;filter:drop-shadow(0 8px 14px rgba(42,29,34,.22))}
+.foto-rasgada{clip-path:polygon(2% 4%,10% 0,22% 3%,35% 0,47% 2%,60% 0,73% 3%,86% 0,98% 3%,100% 18%,97% 33%,100% 50%,98% 66%,100% 82%,97% 97%,85% 100%,70% 97%,56% 100%,42% 98%,28% 100%,14% 97%,2% 100%,0 85%,3% 70%,0 55%,2% 40%,0 24%);border:0}
+/* LOGIN */
+.entrar{padding:20px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.entrar h2{font-family:var(--f-marker);color:var(--vermelho);font-size:34px;line-height:1;transform:rotate(-1.5deg)}
+.entrar label{font-family:var(--f-maquina);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2)}
+.entrar input{width:100%;font:18px var(--f-body);color:var(--tinta);background:var(--papel);border:2px solid var(--tinta);border-radius:10px;padding:11px 12px}
+.entrar input:focus-visible{outline:3px solid var(--pink);outline-offset:1px}
+.entrar .linha{display:flex;gap:8px;flex-wrap:wrap}
+.entrar .linha input{flex:1 1 180px;min-width:0}
+.btn{font:700 16px var(--f-body);background:var(--vermelho);color:var(--papel-2);border:2px solid var(--tinta);border-radius:12px;padding:11px 16px;cursor:pointer;box-shadow:3px 3px 0 var(--tinta)}
+.btn.sec2{background:var(--papel-2);color:var(--tinta);box-shadow:3px 3px 0 var(--pink)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
+.oi{font-family:var(--f-mao);font-weight:700;font-size:28px;line-height:1.1}
+.sair{font:13px var(--f-maquina);background:none;border:0;color:var(--tinta-2);text-decoration:underline;cursor:pointer;align-self:flex-start;padding:0}
+/* CONTAGEM */
+.contagem{background:var(--anil);color:var(--papel-2);padding:14px 14px 12px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;position:relative;box-shadow:4px 4px 0 var(--tinta)}
+.contagem .rot{font-family:var(--f-maquina);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--sol)}
+.contagem .relogio{display:flex;gap:8px}
+.contagem .relogio div{display:flex;flex-direction:column;align-items:center;min-width:52px}
+.contagem .relogio b{font-family:var(--f-groovy);font-weight:400;font-size:32px;line-height:1;font-variant-numeric:tabular-nums;color:var(--rosa)}
+.contagem .relogio span{font-family:var(--f-maquina);font-size:11px}
+.contagem .quando{font-size:13px;opacity:.85}
+/* CHAMADA CHECK-IN */
+.chamada{display:grid;grid-template-columns:1fr 150px;gap:10px;align-items:center;padding:18px 14px;text-decoration:none;color:inherit}
+.chamada b{font-family:var(--f-marker);color:var(--vermelho);font-size:30px;line-height:1;display:block}
+.chamada span{font-size:14px;color:var(--tinta-2)}
+.chamada img{width:150px;height:auto;transform:rotate(4deg)}
+.rodape{display:flex;justify-content:center;gap:0;margin-top:-10px}
+.rodape img{height:auto;filter:drop-shadow(0 4px 6px rgba(42,29,34,.18))}
+
+.sec > .ad,.hero > .ad,.entrar > .ad,.mapa-wrap > .ad{position:absolute}
+/* MAPLIBRE */
+#mapa{height:min(110vw,460px)}
+.mapa{position:relative}
+.pino{display:flex;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer;font-family:var(--f-body)}
+.foto-pino{width:44px;height:44px;border-radius:50%;border:3px solid var(--papel-2);outline:2px solid var(--anil);background:var(--rosa) center/cover no-repeat;display:grid;place-items:center;font-family:var(--f-groovy);font-size:16px;color:var(--tinta);box-shadow:0 3px 6px rgba(42,29,34,.35);flex:none}
+.pino.up .foto-pino{outline-color:var(--pink);outline-width:3px}
+.pino.down .foto-pino{opacity:.55}
+.pino.sug .foto-pino{background-color:var(--sol);outline-style:dashed}
+.nome-pino{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;text-align:left;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff}
+.nome-pino b{font-size:13px;color:var(--tinta);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nome-pino i{font-style:normal;font-size:11px;color:var(--pink);font-weight:700}
+.pino:focus-visible .foto-pino{outline:3px solid var(--pink)}
+.pino-enc{display:flex;align-items:center;gap:4px;font:700 13px var(--f-body);color:var(--vermelho);text-shadow:0 0 3px #fff,0 0 3px #fff}
+.pino-enc img{width:42px;height:auto;filter:drop-shadow(0 2px 3px rgba(42,29,34,.4))}
+.pop{display:flex;flex-direction:column;gap:4px;font:14px var(--f-body);color:var(--tinta)}
+.pop b{font-size:15px}
+.pop span{font-size:12.5px;color:var(--tinta-2)}
+.pop-foto{display:block;height:96px;border-radius:8px;background:center/cover no-repeat;margin-bottom:4px}
+.pop-votos{display:flex;align-items:center;gap:8px;margin:4px 0}
+.pop-votos button{width:40px;height:34px;border:2px solid var(--tinta);border-radius:10px;background:var(--papel-2);color:var(--tinta-2);display:grid;place-items:center;cursor:pointer}
+.pop-votos button svg{width:18px;height:15px}
+.pop-votos button.up[aria-pressed="true"]{color:var(--papel-2);background:var(--pink);border-color:var(--pink)}
+.pop-votos button.down[aria-pressed="true"]{color:var(--papel-2);background:var(--anil);border-color:var(--anil)}
+.pop-votos strong{font-size:18px;min-width:2ch;text-align:center}
+.pop a{font-weight:700;color:var(--anil);font-size:13px}
+.maplibregl-popup-content{border-radius:12px;padding:10px 12px 12px;box-shadow:0 6px 18px rgba(42,29,34,.25)}
+.bt-mapa{position:absolute;left:10px;top:10px;z-index:2;font:700 13px var(--f-body);background:var(--papel-2);color:var(--tinta);border:2px solid var(--tinta);border-radius:999px;padding:8px 12px;cursor:pointer;box-shadow:2px 2px 0 var(--tinta)}
+.bt-fechar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:3;font:700 16px var(--f-body);background:var(--vermelho);color:var(--papel-2);border:2px solid var(--tinta);border-radius:999px;padding:13px 26px;cursor:pointer;box-shadow:3px 3px 0 var(--tinta)}
+.bt-mapa:focus-visible,.bt-fechar:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+.mapa-busca{display:none}
+.mapa-wrap.cheia{position:fixed;inset:0;z-index:9999;margin:0;background:var(--papel)}
+.mapa-wrap.cheia .ad{display:none}
+.mapa-wrap.cheia .mapa{height:100%;border:0;box-shadow:none}
+.mapa-wrap.cheia #mapa{height:100%}
+.mapa-wrap.cheia .mapa-busca{display:block;position:absolute;left:0;right:0;top:0;z-index:3;padding:calc(10px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px))}
+.mapa-wrap.cheia .busca{max-height:55vh;overflow:auto;box-shadow:0 6px 18px rgba(42,29,34,.25);border-radius:14px}
+.mapa-wrap.cheia .busca .fita{display:none}
+.mapa-wrap.cheia .maplibregl-ctrl-top-right{top:calc(150px + env(safe-area-inset-top,0px))}
+.mapa-wrap.cheia .maplibregl-ctrl-bottom-right{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
+.resultados .info{background:none;border:0;padding:0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.bar .thumb{cursor:pointer;padding:0}
+
 /* BUSCA + VOTO */
 .busca{padding:18px 14px 14px;display:flex;flex-direction:column;gap:10px}
 .busca label{font-family:var(--f-maquina);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2)}
@@ -169,47 +250,18 @@ a{color:inherit}
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <symbol id="estrela" viewBox="0 0 60 60">
-      <path d="M30 4L36.5 22.5 56 23.5 40.5 35.5 46 54.5 30 43.5 14 54.5 19.5 35.5 4 23.5 23.5 22.5Z" fill="currentColor" stroke="#2A1D22" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M30 14L33.5 25" stroke="#FCF6EA" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>
-    </symbol>
-    <symbol id="brilho" viewBox="0 0 40 40">
-      <path d="M20 2C21.5 14 26 18.5 38 20 26 21.5 21.5 26 20 38 18.5 26 14 21.5 2 20 14 18.5 18.5 14 20 2Z" fill="currentColor"/>
-    </symbol>
-    <symbol id="coracao" viewBox="0 0 40 36">
-      <path d="M20 33C8 24 3 17 4.5 10.5 6 4.5 13.5 2.5 20 9.5 26.5 2 34.5 4.5 35.5 11 36.5 17.5 31 24 20 33Z" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </symbol>
-    <symbol id="cerejas" viewBox="0 0 100 110">
-      <path d="M50 22Q40 52 28 78M50 22Q62 50 72 84" fill="none" stroke="#1E6B47" stroke-width="5" stroke-linecap="round"/>
-      <path d="M50 22Q30 4 22 18Q30 30 50 22Q70 30 78 16Q70 2 50 22Z" fill="#F49AC2" stroke="#2A1D22" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M48 24L40 44M52 24L60 42" stroke="#F49AC2" stroke-width="6" stroke-linecap="round"/>
-      <circle cx="50" cy="22" r="5" fill="#E43F86" stroke="#2A1D22" stroke-width="2"/>
-      <circle cx="27" cy="86" r="17" fill="#D3213C" stroke="#2A1D22" stroke-width="3"/>
-      <circle cx="73" cy="90" r="17" fill="#D3213C" stroke="#2A1D22" stroke-width="3"/>
-      <ellipse cx="21" cy="80" rx="5" ry="3.5" fill="#FCF6EA" opacity=".85" transform="rotate(-30 21 80)"/>
-      <ellipse cx="67" cy="84" rx="5" ry="3.5" fill="#FCF6EA" opacity=".85" transform="rotate(-30 67 84)"/>
-    </symbol>
-    <pattern id="espelhos" width="12" height="12" patternUnits="userSpaceOnUse">
-      <rect width="12" height="12" fill="#26338A"/><rect width="6" height="6" fill="#F49AC2"/><rect x="6" y="6" width="6" height="6" fill="#FCF6EA"/><rect x="6" width="6" height="6" fill="#8E7FC2"/>
-      <path d="M0 0H12V12" fill="none" stroke="#2A1D22" stroke-width=".8" opacity=".5"/>
-    </pattern>
-    <symbol id="globo" viewBox="0 0 100 112">
-      <path d="M50 0V14" stroke="#2A1D22" stroke-width="2.5"/>
-      <circle cx="50" cy="62" r="46" fill="url(#espelhos)" stroke="#2A1D22" stroke-width="3"/>
-      <ellipse cx="34" cy="44" rx="12" ry="8" fill="#FCF6EA" opacity=".7" transform="rotate(-30 34 44)"/>
-      <path d="M50 16Q22 62 50 108M50 16Q78 62 50 108M6 62H94" fill="none" stroke="#2A1D22" stroke-width="1.2" opacity=".35"/>
-    </symbol>
-  </defs>
-</svg>
-
 <div class="wrap">
 
-  <header class="hero">
-    <svg class="deco" style="width:46px;top:4px;right:2px;color:#F7C548;transform:rotate(14deg)" viewBox="0 0 60 60"><use href="#estrela"/></svg>
-    <figure class="arte"><img src="/arte.webp" alt="Colagem Baratona da Ceci com fotos da Ceci, globo espelhado, cerejas, sol, lua, onça, spritz e estrelas" width="600" height="800"></figure>
-    <h1>Baratona da Ceci!!! 🍻</h1>
+  <header class="topo">
+    <img class="ad" src="/arte/sol.webp" alt="" style="width:118px;left:-22px;top:-4px;transform:rotate(-12deg)">
+    <img class="ad" src="/arte/cerejas.webp" alt="" style="width:78px;right:-10px;top:0;transform:rotate(14deg)">
+    <img class="ad" src="/arte/estrela-laranja.webp" alt="" style="width:40px;right:70px;bottom:6px;transform:rotate(-10deg)">
+    <h1 style="margin:0"><img class="logo" src="/arte/logo.webp" alt="Baratona da Ceci" width="899" height="671"></h1>
+  </header>
+
+  <section class="hero">
+    <img class="ad" src="/arte/spritz.webp" alt="" style="width:66px;left:-14px;top:-20px;transform:rotate(-14deg);z-index:2">
+    <img class="ad" src="/arte/beijo.webp" alt="" style="width:86px;right:-14px;bottom:-26px;transform:rotate(10deg);z-index:2">
     <div class="convite papel">
       <div class="oval">
         <span class="data">28/11</span>
@@ -226,20 +278,39 @@ a{color:inherit}
       <p>A missão é simples (ou nem tanto kkkkk): passar por 26 bares JUNTOS em homenagem aos meus 26 aninhos! 🍺</p>
       <em>Calma, ninguém vai precisar correr! Vamos no pace fofoca mesmo ok?</em>
     </div>
-  </header>
+  </section>
+
+  <section class="entrar papel" id="entrar" aria-labelledby="t-entrar">
+    <span class="fita" style="background:rgba(247,197,72,.75)"></span>
+    <img class="ad" src="/arte/estrela-rosa.webp" alt="" style="width:44px;right:10px;top:-18px;transform:rotate(12deg)">
+    <div id="login">
+      <h2 id="t-entrar">Entre com seu telefone</h2>
+      <form id="form-login" class="linha" autocomplete="on" style="margin-top:12px">
+        <label for="tel" style="width:100%">Seu celular com DDD</label>
+        <input id="tel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 99999-9999" maxlength="20">
+        <button class="btn" type="submit" id="bt-entrar">Entrar</button>
+      </form>
+    </div>
+    <div id="logado" hidden>
+      <p class="oi" id="oi"></p>
+      <form id="form-nome" class="linha" style="margin-top:10px">
+        <label for="nome-perfil" style="width:100%" id="rot-nome">Seu nome</label>
+        <input id="nome-perfil" type="text" maxlength="40" autocomplete="name" placeholder="Como a galera te chama">
+        <button class="btn sec2" type="submit" id="bt-nome">Salvar nome</button>
+      </form>
+      <button class="sair" type="button" id="sair" style="margin-top:10px">Não é você? Sair</button>
+    </div>
+    <p class="dica" id="msg-login" aria-live="polite"></p>
+  </section>
 
   <section class="sec" aria-labelledby="t-presenca">
-    <svg class="deco" style="width:72px;right:-6px;top:-30px;transform:rotate(10deg)" viewBox="0 0 100 110"><use href="#cerejas"/></svg>
+    <img class="ad" src="/arte/coracao-rosa.webp" alt="" style="width:36px;right:8px;top:4px;transform:rotate(12deg)">
     <h2 id="t-presenca">Confirme presença</h2>
     <div class="presenca">
-      <figure class="tira"><span class="fita"></span><img src="/tira.webp" alt="Tira de cabine de fotos com a Ceci mandando beijos" width="230" height="634"></figure>
+      <img class="foto foto-rasgada" src="/arte/foto-beijo.webp" alt="Ceci mandando beijo" width="385" height="355" style="width:128px;transform:rotate(-4deg);margin-top:6px">
       <div class="texto">
         <p>E CLARO que quero preparar um kitzinho especial pra cada um de vocês! 🎁❤️</p>
         <p>Mas, pra isso, preciso que vocês confirmem presença o quanto antes, pra que eu consiga organizar tudo e separar os kits direitinho.</p>
-        <div class="nome-campo" id="nome-campo">
-          <label for="nome">Seu nome</label>
-          <input id="nome" type="text" maxlength="40" autocomplete="name" placeholder="Como a Ceci te chama">
-        </div>
         <button class="rsvp" id="rsvp" type="button" aria-pressed="false">Confirmar presença</button>
         <p class="quem-vai" id="quem-vai" aria-live="polite"></p>
         <p class="fecho">Espero vocês pra comemorar comigo!!!</p>
@@ -247,13 +318,32 @@ a{color:inherit}
     </div>
   </section>
 
+  <div class="faixa" aria-hidden="true">
+    <img class="ad" src="/arte/tarot.webp" alt="" style="width:74px;left:6px;top:0;transform:rotate(-9deg)">
+    <img class="ad" src="/arte/coracao-globo.webp" alt="" style="width:96px;left:42%;top:10px;transform:rotate(6deg)">
+    <img class="ad" src="/arte/estrela-dourada.webp" alt="" style="width:40px;right:110px;top:6px">
+    <img class="ad" src="/arte/borboleta.webp" alt="" style="width:92px;right:0;top:14px;transform:rotate(12deg)">
+  </div>
+
   <div class="toalha" aria-hidden="true"></div>
 
   <section class="sec" aria-labelledby="t-roteiro">
-    <svg class="deco" style="width:30px;right:20px;top:6px;color:#E43F86" viewBox="0 0 40 40"><use href="#brilho"/></svg>
+    <img class="ad" src="/arte/globo.webp" alt="" style="width:84px;right:-6px;top:-34px;transform:rotate(8deg)">
     <h2 id="t-roteiro">Roteiro</h2>
     <p class="roteiro-txt">Tô montando nosso tour pelos bares e já já mando tudo pra vocês! 🍻</p>
 
+    <div class="contagem" id="contagem" aria-live="off">
+      <span class="rot" id="cont-rot">a votação fecha em</span>
+      <div class="relogio" id="relogio">
+        <div><b id="c-d">–</b><span>dias</span></div>
+        <div><b id="c-h">–</b><span>horas</span></div>
+        <div><b id="c-m">–</b><span>min</span></div>
+        <div><b id="c-s">–</b><span>seg</span></div>
+      </div>
+      <span class="quando" id="cont-quando">domingo, 15/11, às 23h59</span>
+    </div>
+
+    <span id="lugar-busca" hidden></span>
     <form class="busca papel" id="busca" autocomplete="off">
       <span class="fita"></span>
       <label for="q">Buscar ou sugerir bar</label>
@@ -266,16 +356,13 @@ a{color:inherit}
       <p class="dica" id="dica" aria-live="polite"></p>
     </form>
 
-    <div class="mapa-wrap">
-      <svg class="deco" style="width:70px;right:-10px;top:-30px;transform:rotate(-8deg)" viewBox="0 0 100 112"><use href="#globo"/></svg>
-      <svg class="deco" style="width:40px;left:-10px;bottom:46px;color:#F7C548;transform:rotate(-14deg)" viewBox="0 0 60 60"><use href="#estrela"/></svg>
+    <div class="mapa-wrap" id="mapa-wrap">
+      <img class="ad" src="/arte/estrela-roxa.webp" alt="" style="width:42px;left:-12px;bottom:40px;z-index:3;transform:rotate(-14deg)">
       <div class="mapa">
         <div id="mapa" role="region" aria-label="Mapa com os bares da pré-lista e o ponto de encontro"></div>
-        <div class="legenda">
-          <span><i style="background:var(--sol)"></i>encontro</span>
-          <span><i style="background:var(--rosa);border-color:var(--pink)"></i>você votou ▲</span>
-          <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=Rua%20dos%20Pinheiros%2C%201057%2C%20Pinheiros%2C%20S%C3%A3o%20Paulo">Encontro no Google Maps</a>
-        </div>
+        <div class="mapa-busca" id="mapa-busca"></div>
+        <button class="bt-mapa" id="bt-ampliar" type="button">⤢ Ampliar mapa</button>
+        <button class="bt-fechar" id="bt-fechar" type="button" hidden>Diminuir mapa</button>
       </div>
     </div>
 
@@ -288,9 +375,23 @@ a{color:inherit}
     <ul class="lista" id="lista"></ul>
     <p class="foto-cred">Fotos dos bares: Google Maps. Mapa: © OpenStreetMap, © CARTO.</p>
   </section>
+
+  <a class="chamada papel" href="/checkin.html">
+    <span class="fita"></span>
+    <div><b>Check-in nos bares</b><span>No dia 28, deslize pra marcar cada bar que você passou.</span></div>
+    <img src="/arte/foto-boia.webp" alt="Ceci de boné, comemorando dentro de uma boia de rosquinha" width="471" height="560">
+  </a>
+
+  <footer class="rodape" aria-hidden="true">
+    <img src="/arte/onca.webp" alt="" style="width:150px;transform:rotate(-6deg)">
+    <img src="/arte/vinil.webp" alt="" style="width:110px;margin-left:-30px;transform:rotate(10deg)">
+    <img class="foto foto-rasgada" src="/arte/foto-gatinho.webp" alt="" style="width:110px;margin-left:-20px;transform:rotate(4deg)">
+  </footer>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/comum.js"></script>
+<script src="/bares.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

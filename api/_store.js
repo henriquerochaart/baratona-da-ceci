@@ -2,8 +2,8 @@ import { put, list, del } from "@vercel/blob";
 
 // Cada pessoa grava seus próprios arquivos: votos/<voter>/..., sugestoes/<voter>/..., presenca/<voter>/...
 // O arquivo mais recente de cada pessoa vale; os antigos são apagados na leitura.
-export const COLECOES = ["votos", "sugestoes", "presenca"];
-const VOTER = /^[a-z0-9-]{8,40}$/;
+export const COLECOES = ["votos", "sugestoes", "presenca", "perfil", "checkins"];
+const VOTER = /^[a-f0-9]{32}$/;
 export const validVoter = (v) => typeof v === "string" && VOTER.test(v);
 
 export async function grava(colecao, voter, dados) {
@@ -50,8 +50,8 @@ async function leColecao(colecao) {
 let cache = null;
 export async function estado() {
   if (cache && Date.now() - cache.t < 4000) return cache.v;
-  const [votos, sugestoes, presenca] = await Promise.all(COLECOES.map(leColecao));
-  const v = { votos, sugestoes, presenca };
+  const [votos, sugestoes, presenca, perfil, checkins] = await Promise.all(COLECOES.map(leColecao));
+  const v = { votos, sugestoes, presenca, perfil, checkins };
   cache = { t: Date.now(), v };
   return v;
 }
