@@ -26,22 +26,36 @@ const formataTel = (v) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
-/* Liga o cartão de login (#login, #logado, #form-login, #form-nome) e avisa quando muda. */
+/* Liga o login da página e avisa quando muda. A home não tem mais o cartão de login (quem
+   vota entra pela janelinha) e mostra só a linha #sessao ("Oi, Fulano! · sair"); o check-in
+   ainda usa o cartão (#login, #logado, #form-login, #form-nome). */
 function montaLogin(aoMudar) {
   const $ = (id) => document.getElementById(id);
-  const tel = $("tel"), msg = $("msg-login"), nomeIn = $("nome-perfil");
-  if (!tel) return;
-  tel.addEventListener("input", () => { tel.value = formataTel(tel.value); });
+  const tel = $("tel"), msg = $("msg-login"), nomeIn = $("nome-perfil"), sessao = $("sessao");
+  const sai = () => { Sessao.sai(); desenha(); aoMudar && aoMudar(); };
   function desenha() {
-    const dentro = !!Sessao.token;
+    const dentro = !!Sessao.token, n = Sessao.nome;
+    if (sessao) {
+      sessao.hidden = !dentro; sessao.textContent = "";
+      if (dentro) {
+        const b = document.createElement("b"); b.textContent = n ? n.split(" ")[0] : "você";
+        const bt = document.createElement("button"); bt.type = "button"; bt.textContent = "sair"; bt.onclick = sai;
+        sessao.append("Oi, ", b, "! 💋 · ", bt);
+      }
+    }
+    if (!tel) return;
     $("login").hidden = dentro; $("logado").hidden = !dentro;
     if (dentro) {
-      const n = Sessao.nome;
       $("oi").textContent = n ? `Oi, ${n.split(" ")[0]}! 💋` : "Oi! Como a galera te chama?";
       $("rot-nome").textContent = n ? "Seu nome (pode editar)" : "Escreva seu nome para continuar";
       nomeIn.value = n;
     }
   }
+  // A janelinha de login (JanelaLogin) avisa a página por aqui: redesenha e recarrega os dados.
+  window.aoEntrar = async () => { desenha(); if (aoMudar) await aoMudar(); };
+  desenha();
+  if (!tel) return { desenha };
+  tel.addEventListener("input", () => { tel.value = formataTel(tel.value); });
   $("form-login").addEventListener("submit", async (e) => {
     e.preventDefault();
     const b = $("bt-entrar"); b.disabled = true; msg.textContent = "";
@@ -62,10 +76,7 @@ function montaLogin(aoMudar) {
     } catch (err) { msg.textContent = err.message; if (err.status === 401) desenha(); }
     b.disabled = false;
   });
-  $("sair").addEventListener("click", () => { Sessao.sai(); desenha(); aoMudar && aoMudar(); tel.focus(); });
-  desenha();
-  // A janelinha de login (JanelaLogin) avisa a página por aqui: redesenha o cartão e recarrega os dados.
-  window.aoEntrar = async () => { desenha(); if (aoMudar) await aoMudar(); };
+  $("sair").addEventListener("click", () => { sai(); tel.focus(); });
   return { desenha };
 }
 
