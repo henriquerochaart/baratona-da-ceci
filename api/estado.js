@@ -3,7 +3,7 @@ import { quem, PRAZO, votacaoAberta, CHECKIN_ABRE, checkinAberto } from "./_auth
 
 export default async function handler(req, res) {
   try {
-    const { votos, sugestoes, presenca, perfil, checkins } = await estado();
+    const { votos, sugestoes, perfil, checkins } = await estado();
     const eu = quem(req.query?.token);
     const nomeDe = (id) => perfil[id]?.nome || quem(id)?.nome || "";
     const pontos = {};
@@ -21,10 +21,6 @@ export default async function handler(req, res) {
         sug.push({ id: it.id, nome: it.nome, end: it.end || "", lat: it.lat ?? null, lon: it.lon ?? null, at: it.at || "", por: nomeDe(autor) });
     }
     sug.sort((a, b) => String(a.at).localeCompare(String(b.at)));
-    const confirmados = Object.entries(presenca)
-      .filter(([id, d]) => d?.vai === true && quem(id))
-      .sort((a, b) => String(a[1].at).localeCompare(String(b[1].at)))
-      .map(([id]) => ({ nome: nomeDe(id) || "Convidado", eu: eu?.token === id }));
     const placar = Object.entries(checkins)
       .filter(([id]) => quem(id))
       .map(([id, d]) => ({ nome: nomeDe(id) || "Convidado", total: Array.isArray(d?.lista) ? d.lista.length : 0, eu: eu?.token === id }))
@@ -33,11 +29,10 @@ export default async function handler(req, res) {
     const meu = eu ? {
       nome: nomeDe(eu.token),
       v: votos[eu.token]?.v || {},
-      vai: presenca[eu.token]?.vai === true,
       checkins: checkins[eu.token]?.lista || [],
     } : null;
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ pontos, votantes, sugestoes: sug, confirmados, placar, meu,
+    res.status(200).json({ pontos, votantes, sugestoes: sug, placar, meu,
       prazo: PRAZO, votacaoAberta: votacaoAberta(), checkinAbre: CHECKIN_ABRE, checkinAberto: checkinAberto() });
   } catch (e) {
     res.status(500).json({ erro: "Não deu para carregar agora." });

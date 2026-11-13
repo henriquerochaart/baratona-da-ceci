@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-let meusVotos = {}, pontos = {}, votantes = 0, sugestoes = [], confirmados = [], euVou = false;
+let meusVotos = {}, pontos = {}, votantes = 0, sugestoes = [];
 let ordem = "votos", busca = "", ocupado = false, carregou = false;
 let prazo = Date.parse("2026-11-15T23:59:59-03:00"), votacaoAberta = Date.now() <= prazo;
 
@@ -10,13 +10,12 @@ async function carrega() {
     const j = await api("/api/estado?token=" + encodeURIComponent(Sessao.token));
     pontos = j.pontos || {}; votantes = j.votantes || 0;
     sugestoes = (j.sugestoes || []).map((s) => ({ ...s, sug: true }));
-    confirmados = j.confirmados || [];
     if (j.prazo) prazo = Date.parse(j.prazo);
     votacaoAberta = !!j.votacaoAberta;
     if (j.meu && !ocupado) {
-      meusVotos = j.meu.v || {}; euVou = !!j.meu.vai;
+      meusVotos = j.meu.v || {};
       if (j.meu.nome && j.meu.nome !== Sessao.nome) { Sessao.nomeAtual(j.meu.nome); login && login.desenha(); }
-    } else if (!j.meu) { meusVotos = {}; euVou = false; }
+    } else if (!j.meu) { meusVotos = {}; }
     carregou = true; aviso("");
     tudo();
   } catch (e) {
@@ -257,35 +256,8 @@ async function vota(id, dir) {
   ocupado = false; tudo();
 }
 
-/* ---------- presença ---------- */
-const btn = $("rsvp"), quem = $("quem-vai");
-function desenhaPresenca() {
-  btn.disabled = ocupado;
-  btn.setAttribute("aria-pressed", String(euVou));
-  btn.textContent = euVou ? "✓ Presença confirmada · desfazer" : "Confirmar presença";
-  if (!carregou) return;
-  const n = confirmados.length;
-  if (!n) { quem.textContent = "Ninguém confirmou ainda."; return; }
-  quem.textContent = "";
-  const b = document.createElement("b"); b.textContent = n + (n === 1 ? " confirmado" : " confirmados");
-  quem.append(b, ": " + confirmados.map((c) => (c.eu ? c.nome + " (você)" : c.nome)).join(", "));
-}
-btn.addEventListener("click", async () => {
-  if (ocupado || !precisaLogin("confirmar presença")) return;
-  ocupado = true; desenhaPresenca();
-  try {
-    const vai = !euVou;
-    await api("/api/presenca", { vai });
-    euVou = vai;
-    confirmados = confirmados.filter((c) => !c.eu);
-    if (vai) confirmados.push({ nome: Sessao.nome, eu: true });
-    aviso("");
-  } catch (e) { aviso(e.message); }
-  ocupado = false; desenhaPresenca();
-});
-
 /* ---------- geral ---------- */
-function tudo() { atualizaStatus(); desenhaLista(); desenhaMapa(); desenhaPresenca(); atualizaBusca(); }
+function tudo() { atualizaStatus(); desenhaLista(); desenhaMapa(); atualizaBusca(); }
 const fv = $("f-votos"), fa = $("f-az");
 fv.onclick = () => { ordem = "votos"; fv.setAttribute("aria-pressed", "true"); fa.setAttribute("aria-pressed", "false"); desenhaLista(); };
 fa.onclick = () => { ordem = "az"; fa.setAttribute("aria-pressed", "true"); fv.setAttribute("aria-pressed", "false"); desenhaLista(); };

@@ -65,12 +65,6 @@ a{color:inherit}
 .tira .fita{width:54px;top:-10px}
 .presenca .texto{display:flex;flex-direction:column;gap:14px;min-width:0}
 .presenca p{font-size:16px}
-.rsvp{font:700 17px var(--f-body);background:var(--vermelho);color:var(--papel-2);border:2px solid var(--tinta);border-radius:14px;padding:13px 16px;cursor:pointer;box-shadow:3px 3px 0 var(--tinta);text-align:center}
-.rsvp[aria-pressed="true"]{background:var(--papel-2);color:var(--tinta);box-shadow:3px 3px 0 var(--pink)}
-.rsvp:disabled{opacity:.5;cursor:default}
-.rsvp:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
-.quem-vai{font-family:var(--f-maquina);font-size:13px;color:var(--tinta-2);line-height:1.45}
-.quem-vai b{color:var(--tinta);font-weight:400}
 .fecho{font-family:var(--f-marker);color:var(--vermelho);font-size:24px;line-height:1.15;transform:rotate(-2deg)}
 
 .toalha{height:26px;background:repeating-conic-gradient(var(--pink) 0 25%,#F8C8DC 0 50%) 0 0/26px 26px;transform:rotate(-.8deg);box-shadow:0 2px 0 rgba(42,29,34,.12)}
@@ -303,16 +297,12 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
     <p class="dica" id="msg-login" aria-live="polite"></p>
   </section>
 
-  <section class="sec" aria-labelledby="t-presenca">
+  <section class="sec">
     <img class="ad" src="/arte/coracao-rosa.webp" alt="" style="width:36px;right:8px;top:4px;transform:rotate(12deg)">
-    <h2 id="t-presenca">Confirme presença</h2>
     <div class="presenca">
       <img class="foto foto-rasgada" src="/arte/foto-beijo.webp" alt="Ceci mandando beijo" width="385" height="355" style="width:128px;transform:rotate(-4deg);margin-top:6px">
       <div class="texto">
         <p>E CLARO que quero preparar um kitzinho especial pra cada um de vocês! 🎁❤️</p>
-        <p>Mas, pra isso, preciso que vocês confirmem presença o quanto antes, pra que eu consiga organizar tudo e separar os kits direitinho.</p>
-        <button class="rsvp" id="rsvp" type="button" aria-pressed="false">Confirmar presença</button>
-        <p class="quem-vai" id="quem-vai" aria-live="polite"></p>
         <p class="fecho">Espero vocês pra comemorar comigo!!!</p>
       </div>
     </div>
