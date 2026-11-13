@@ -38,6 +38,16 @@ export function quem(token) {
   return c ? { token, nome: c.nome } : null;
 }
 
+// Admins (Ceci e Henrique) podem apagar e restaurar bares. Celulares na variável ADMINS,
+// separados por vírgula; cada um também precisa estar em CONVIDADOS para entrar.
+export function ehAdmin(token) {
+  if (typeof token !== "string") return false;
+  const c = convidados().get(token);
+  if (!c) return false;
+  const admins = String(process.env.ADMINS || "").split(/[,;]+/).map(chave).filter(Boolean);
+  return admins.includes(c.chave);
+}
+
 // Votação até quarta 18/11/2026, 23:59 em São Paulo.
 export const PRAZO = "2026-11-18T23:59:59-03:00";
 export const votacaoAberta = () => Date.now() <= Date.parse(PRAZO);

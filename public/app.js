@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-let meusVotos = {}, pontos = {}, votantes = 0, sugestoes = [];
+let meusVotos = {}, pontos = {}, votantes = 0, sugestoes = [], ocultos = new Set(), souAdmin = false;
 let ordem = "votos", busca = "", ocupado = false, carregou = false;
 let prazo = Date.parse("2026-11-18T23:59:59-03:00"), votacaoAberta = Date.now() <= prazo;
 
@@ -10,6 +10,8 @@ async function carrega() {
     const j = await api("/api/estado?token=" + encodeURIComponent(Sessao.token));
     pontos = j.pontos || {}; votantes = j.votantes || 0;
     sugestoes = (j.sugestoes || []).map((s) => ({ ...s, sug: true }));
+    if (!ocupado) ocultos = new Set(j.ocultos || []);
+    souAdmin = !!(j.meu && j.meu.admin);
     if (j.prazo) prazo = Date.parse(j.prazo);
     votacaoAberta = !!j.votacaoAberta;
     if (j.meu && !ocupado) {
@@ -24,12 +26,15 @@ async function carrega() {
 }
 
 /* ---------- lista ---------- */
-function todos() {
+// base(): todos os bares, inclusive os apagados pelos admins; todos(): só os que aparecem.
+function base() {
   const vistos = new Set(BARES.map((b) => norm(b.nome)));
   const extra = [];
   sugestoes.forEach((s) => { const k = norm(s.nome); if (!k || vistos.has(k)) return; vistos.add(k); extra.push(s); });
   return [...BARES, ...extra];
 }
+const todos = () => base().filter((b) => !ocultos.has(b.id));
+const foiApagado = (k) => base().some((b) => ocultos.has(b.id) && norm(b.nome) === k);
 const ranking = () => todos().sort((a, b) => (pontos[b.id] || 0) - (pontos[a.id] || 0) || a.nome.localeCompare(b.nome, "pt"));
 const SETA = (up) => `<svg viewBox="0 0 22 18" aria-hidden="true"><path d="${up ? "M11 2L20 15H2Z" : "M11 16L20 3H2Z"}" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
 
@@ -53,6 +58,16 @@ function desenhaLista() {
     if (b.end) meta.append(b.end + " · ");
     const a = document.createElement("a"); a.className = "maps"; a.href = mapsUrl(b); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Google Maps"; meta.append(a);
     if (b.sug) { const s = document.createElement("span"); s.className = "por"; s.textContent = " · sugerido" + (b.por ? " por " + b.por : ""); meta.append(s); }
+    if (souAdmin) {
+      const ap = document.createElement("button"); ap.type = "button"; ap.className = "apagar"; ap.textContent = "apagar";
+      ap.setAttribute("aria-label", "Apagar " + b.nome + " da lista"); ap.disabled = ocupado;
+      let armado = null;
+      ap.onclick = () => {
+        if (!armado) { ap.textContent = "toque de novo pra apagar"; ap.classList.add("armado"); armado = setTimeout(() => { armado = null; ap.textContent = "apagar"; ap.classList.remove("armado"); }, 4000); return; }
+        clearTimeout(armado); armado = null; administra("apagar", b);
+      };
+      meta.append(" · ", ap);
+    }
     const v = document.createElement("div"); v.className = "voto";
     const meu = meusVotos[b.id] || 0, n = pontos[b.id] || 0;
     const up = document.createElement("button"); up.type = "button"; up.className = "up"; up.innerHTML = SETA(true);
@@ -183,9 +198,10 @@ function atualizaBusca() {
   if (!votacaoAberta) { linhaEnd.hidden = true; dica.textContent = "A votação fechou. Dá pra buscar na lista, mas não sugerir."; return; }
   if (!k) { linhaEnd.hidden = true; res.textContent = ""; dica.textContent = "Digite o nome do bar. Se ele não estiver na lista, dá pra adicionar."; return; }
   const lista = todos(), achou = lista.filter((b) => norm(b.nome + " " + (b.end || "")).includes(k)), exato = lista.some((b) => norm(b.nome) === k);
-  linhaEnd.hidden = exato || k.length < 3;
+  const tirado = !exato && foiApagado(k);
+  linhaEnd.hidden = exato || tirado || k.length < 3;
   add.disabled = ocupado;
-  dica.textContent = exato ? "Esse bar já está na lista." : k.length < 3 ? "Continue digitando." :
+  dica.textContent = exato ? "Esse bar já está na lista." : tirado ? "Esse bar foi tirado da lista." : k.length < 3 ? "Continue digitando." :
     achou.length ? `${achou.length} ${achou.length === 1 ? "bar parecido" : "bares parecidos"} na lista.` : "";
   const unico = achou.length === 1 ? achou[0] : lista.find((b) => norm(b.nome) === k);
   if (unico && mapaWrap.classList.contains("cheia")) voaPara(unico, false);
@@ -199,7 +215,7 @@ function buscaLugares(texto) {
       const url = "https://photon.komoot.io/api/?" + new URLSearchParams({ q: texto + " São Paulo", lat: "-23.5605", lon: "-46.6905", limit: "10", bbox: "-46.715,-23.580,-46.670,-23.545" });
       const j = await (await fetch(url)).json();
       if (seq !== buscaSeq) return;
-      const nomesLista = new Set(todos().map((b) => norm(b.nome))), vistos = new Set();
+      const nomesLista = new Set(base().map((b) => norm(b.nome))), vistos = new Set();
       const achados = (j.features || []).map((f) => {
         const p = f.properties || {}, c = f.geometry && f.geometry.coordinates;
         const end = [p.street, p.housenumber].filter(Boolean).join(", ") + (p.district || p.locality ? " · " + (p.district || p.locality) : "");
@@ -222,7 +238,7 @@ q.addEventListener("input", () => { busca = q.value; desenhaLista(); atualizaBus
 formBusca.addEventListener("submit", (e) => {
   e.preventDefault();
   const nome = busca.trim().replace(/\s+/g, " ");
-  if (norm(nome).length < 3 || todos().some((b) => norm(b.nome) === norm(nome))) return;
+  if (norm(nome).length < 3 || base().some((b) => norm(b.nome) === norm(nome))) return;
   sugere({ nome, end: rua.value.trim() });
 });
 async function sugere(item) {
@@ -256,8 +272,38 @@ async function vota(id, dir) {
   ocupado = false; tudo();
 }
 
+/* ---------- admin (Ceci e Henrique): apagar e restaurar bares ---------- */
+async function administra(acao, b) {
+  if (ocupado) return;
+  ocupado = true; tudo();
+  try {
+    const j = await api("/api/admin", { acao, id: b.id });
+    ocultos = new Set(j.ocultos || []);
+    if (popup) popup.remove();
+    aviso(acao === "apagar" ? `${b.nome} saiu da lista. Dá pra restaurar no painel de admin.` : `${b.nome} voltou pra lista.`);
+  } catch (e) { aviso(e.message); }
+  ocupado = false; tudo();
+}
+function desenhaAdmin() {
+  const box = $("admin");
+  box.hidden = !souAdmin;
+  if (!souAdmin) return;
+  const ul = $("apagados"); ul.textContent = "";
+  const lista = base().filter((b) => ocultos.has(b.id)).sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  $("admin-resumo").textContent = lista.length
+    ? `${lista.length} ${lista.length === 1 ? "bar apagado" : "bares apagados"}. Os votos ficam guardados e voltam se você restaurar.`
+    : "Nenhum bar apagado. Pra apagar, use o “apagar” ao lado do bar na lista.";
+  lista.forEach((b) => {
+    const li = document.createElement("li");
+    const n = document.createElement("span"); n.textContent = b.nome + (b.sug ? " (sugestão)" : "");
+    const r = document.createElement("button"); r.type = "button"; r.textContent = "restaurar"; r.disabled = ocupado;
+    r.setAttribute("aria-label", "Restaurar " + b.nome); r.onclick = () => administra("restaurar", b);
+    li.append(n, r); ul.append(li);
+  });
+}
+
 /* ---------- geral ---------- */
-function tudo() { atualizaStatus(); desenhaLista(); desenhaMapa(); atualizaBusca(); }
+function tudo() { atualizaStatus(); desenhaLista(); desenhaMapa(); atualizaBusca(); desenhaAdmin(); }
 const fv = $("f-votos"), fa = $("f-az");
 fv.onclick = () => { ordem = "votos"; fv.setAttribute("aria-pressed", "true"); fa.setAttribute("aria-pressed", "false"); desenhaLista(); };
 fa.onclick = () => { ordem = "az"; fa.setAttribute("aria-pressed", "true"); fv.setAttribute("aria-pressed", "false"); desenhaLista(); };

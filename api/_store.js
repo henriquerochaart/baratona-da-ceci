@@ -2,7 +2,9 @@ import { put, list, del } from "@vercel/blob";
 
 // Cada pessoa grava seus próprios arquivos: votos/<voter>/..., sugestoes/<voter>/..., checkins/<voter>/...
 // O arquivo mais recente de cada pessoa vale; os antigos são apagados na leitura.
-export const COLECOES = ["votos", "sugestoes", "perfil", "checkins"];
+// "ocultos" é um arquivo só, dos admins, guardado em GERAL: a lista de bares apagados.
+export const COLECOES = ["votos", "sugestoes", "perfil", "checkins", "ocultos"];
+export const GERAL = "0".repeat(32);
 const VOTER = /^[a-f0-9]{32}$/;
 export const validVoter = (v) => typeof v === "string" && VOTER.test(v);
 
@@ -50,8 +52,8 @@ async function leColecao(colecao) {
 let cache = null;
 export async function estado() {
   if (cache && Date.now() - cache.t < 4000) return cache.v;
-  const [votos, sugestoes, perfil, checkins] = await Promise.all(COLECOES.map(leColecao));
-  const v = { votos, sugestoes, perfil, checkins };
+  const [votos, sugestoes, perfil, checkins, ocultos] = await Promise.all(COLECOES.map(leColecao));
+  const v = { votos, sugestoes, perfil, checkins, ocultos };
   cache = { t: Date.now(), v };
   return v;
 }

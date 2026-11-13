@@ -1,9 +1,10 @@
-import { estado } from "./_store.js";
-import { quem, PRAZO, votacaoAberta, CHECKIN_ABRE, checkinAberto } from "./_auth.js";
+import { estado, GERAL } from "./_store.js";
+import { quem, ehAdmin, PRAZO, votacaoAberta, CHECKIN_ABRE, checkinAberto } from "./_auth.js";
 
 export default async function handler(req, res) {
   try {
-    const { votos, sugestoes, perfil, checkins } = await estado();
+    const { votos, sugestoes, perfil, checkins, ocultos } = await estado();
+    const apagados = Array.isArray(ocultos[GERAL]?.ids) ? ocultos[GERAL].ids : [];
     const eu = quem(req.query?.token);
     const nomeDe = (id) => perfil[id]?.nome || quem(id)?.nome || "";
     const pontos = {};
@@ -30,9 +31,10 @@ export default async function handler(req, res) {
       nome: nomeDe(eu.token),
       v: votos[eu.token]?.v || {},
       checkins: checkins[eu.token]?.lista || [],
+      admin: ehAdmin(eu.token),
     } : null;
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ pontos, votantes, sugestoes: sug, placar, meu,
+    res.status(200).json({ pontos, votantes, sugestoes: sug, placar, meu, ocultos: apagados,
       prazo: PRAZO, votacaoAberta: votacaoAberta(), checkinAbre: CHECKIN_ABRE, checkinAberto: checkinAberto() });
   } catch (e) {
     res.status(500).json({ erro: "Não deu para carregar agora." });

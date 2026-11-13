@@ -1,18 +1,20 @@
 const $ = (id) => document.getElementById(id);
-let pontos = {}, sugestoes = [], meus = [], placar = [], aberto = false, abre = "2026-11-28T10:00:00-03:00", escolhido = null, enviando = false, carregou = false;
+let pontos = {}, sugestoes = [], ocultos = new Set(), meus = [], placar = [], aberto = false, abre = "2026-11-28T10:00:00-03:00", escolhido = null, enviando = false, carregou = false;
 
-function todos() {
+// inclusiveApagados: só para achar a foto de um check-in antigo num bar que os admins tiraram depois.
+function todos(inclusiveApagados) {
   const vistos = new Set(BARES.map((b) => norm(b.nome))), extra = [];
   sugestoes.forEach((s) => { const k = norm(s.nome); if (!k || vistos.has(k)) return; vistos.add(k); extra.push(s); });
-  return [...BARES, ...extra].sort((a, b) => (pontos[b.id] || 0) - (pontos[a.id] || 0) || a.nome.localeCompare(b.nome, "pt"));
+  return [...BARES, ...extra].filter((b) => inclusiveApagados || !ocultos.has(b.id))
+    .sort((a, b) => (pontos[b.id] || 0) - (pontos[a.id] || 0) || a.nome.localeCompare(b.nome, "pt"));
 }
 const feitoSet = () => new Set(meus.map((c) => c.bar));
-const fotoDe = (id) => (todos().find((b) => b.id === id) || {}).foto || "";
+const fotoDe = (id) => (todos(true).find((b) => b.id === id) || {}).foto || "";
 
 async function carrega() {
   try {
     const j = await api("/api/estado?token=" + encodeURIComponent(Sessao.token));
-    pontos = j.pontos || {}; sugestoes = j.sugestoes || []; placar = j.placar || [];
+    pontos = j.pontos || {}; sugestoes = j.sugestoes || []; placar = j.placar || []; ocultos = new Set(j.ocultos || []);
     aberto = !!j.checkinAberto; abre = j.checkinAbre || abre;
     meus = (j.meu && j.meu.checkins) || [];
     if (j.meu && j.meu.nome && j.meu.nome !== Sessao.nome) { Sessao.nomeAtual(j.meu.nome); login.desenha(); }
