@@ -252,7 +252,8 @@ formBusca.addEventListener("submit", (e) => {
   sugere({ nome, end: rua.value.trim() });
 });
 async function sugere(item) {
-  if (ocupado || !precisaLogin("sugerir um bar", () => sugere(item))) return;
+  if (ocupado) return;
+  Sessao.garante();
   ocupado = true; add.disabled = true; res.querySelectorAll("button").forEach((b) => (b.disabled = true));
   try {
     const j = await api("/api/sugestao", { item });
@@ -271,7 +272,7 @@ async function sugere(item) {
 /* ---------- votos ---------- */
 async function vota(id, dir) {
   if (ocupado || !votacaoAberta) return;
-  if (!precisaLogin("votar", () => vota(id, dir))) return;
+  Sessao.garante();
   const antes = { ...meusVotos }, prox = { ...meusVotos };
   if (prox[id] === dir) delete prox[id]; else prox[id] = dir;
   pontos[id] = (pontos[id] || 0) - (antes[id] || 0) + (prox[id] || 0);
@@ -327,6 +328,7 @@ fv.onclick = () => { ordem = "votos"; fv.setAttribute("aria-pressed", "true"); f
 fa.onclick = () => { ordem = "az"; fa.setAttribute("aria-pressed", "true"); fv.setAttribute("aria-pressed", "false"); desenhaLista(); };
 
 const login = montaLogin(() => carrega());
+if (/[?&]admin\b/.test(location.search) && !Sessao.telefone) JanelaLogin.abre("entrar como admin");
 iniciaMapa(); tudo(); carrega(); relogio();
 setInterval(relogio, 1000);
 setInterval(() => { if (!document.hidden && !ocupado) carrega(); }, 20000);

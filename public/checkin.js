@@ -44,7 +44,7 @@ function desenha() {
   const t = document.createElement("div"); const nb = document.createElement("b"); nb.textContent = b.nome; const ne = document.createElement("span"); ne.textContent = b.end || "";
   t.append(nb, ne); alvo.append(f, t);
   // estado do trilho
-  const dentro = !!(Sessao.token && Sessao.nome), ja = feitos.has(b.id);
+  const dentro = !!(Sessao.telefone && Sessao.nome), ja = feitos.has(b.id);
   const tr = $("trilho"); tr.classList.toggle("off", !aberto || !dentro || ja); tr.classList.toggle("ok", ja);
   $("texto-trilho").textContent = !dentro ? "Entre com seu telefone primeiro" :
     !aberto ? "O check-in abre no dia 28/11, às 10h" : ja ? "✓ Check-in feito aqui" : "Deslize pra fazer check-in";
@@ -77,7 +77,7 @@ function poe(x) { posX = Math.max(0, Math.min(maxX(), x)); bola.style.transform 
 function reseta() { bola.style.transition = "transform .25s ease"; preenche.style.transition = "width .25s ease"; poe(0); setTimeout(() => { bola.style.transition = ""; preenche.style.transition = ""; }, 260); }
 const podeDeslizar = () => !trilho.classList.contains("off") && !enviando;
 bola.addEventListener("pointerdown", (e) => {
-  if (!podeDeslizar()) { if (!(Sessao.token && Sessao.nome)) precisaLogin("fazer check-in"); return; }
+  if (!podeDeslizar()) { if (!(Sessao.telefone && Sessao.nome)) precisaLogin("fazer check-in"); return; }
   arrastando = true; inicioX = e.clientX - posX; bola.setPointerCapture(e.pointerId); bola.style.cursor = "grabbing";
 });
 bola.addEventListener("pointermove", (e) => { if (arrastando) poe(e.clientX - inicioX); });

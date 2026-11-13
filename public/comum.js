@@ -1,10 +1,23 @@
 /* Sessão por telefone e chamadas à API, usados pela página principal e pelo check-in. */
+// Votar não pede telefone: cada navegador ganha uma identificação anônima (32 hex) na primeira
+// vez que vota ou sugere. O login por celular ficou só para os admins (/?admin) e o check-in.
+let tokenMemoria = "";
 const Sessao = {
-  get token() { try { return localStorage.getItem("baratona-token") || ""; } catch { return ""; } },
+  get token() { try { return localStorage.getItem("baratona-token") || tokenMemoria; } catch { return tokenMemoria; } },
   get nome() { try { return localStorage.getItem("baratona-nome") || ""; } catch { return ""; } },
-  salva(token, nome) { try { localStorage.setItem("baratona-token", token); localStorage.setItem("baratona-nome", nome || ""); } catch {} },
+  get anonimo() { try { return localStorage.getItem("baratona-anon") === "1"; } catch { return !!tokenMemoria; } },
+  get telefone() { return !!this.token && !this.anonimo; },
+  garante() {
+    if (this.token) return this.token;
+    const a = new Uint8Array(16); crypto.getRandomValues(a);
+    const t = [...a].map((x) => x.toString(16).padStart(2, "0")).join("");
+    try { localStorage.setItem("baratona-token", t); localStorage.setItem("baratona-nome", ""); localStorage.setItem("baratona-anon", "1"); }
+    catch { tokenMemoria = t; }
+    return t;
+  },
+  salva(token, nome) { try { localStorage.setItem("baratona-token", token); localStorage.setItem("baratona-nome", nome || ""); localStorage.removeItem("baratona-anon"); } catch {} },
   nomeAtual(nome) { try { localStorage.setItem("baratona-nome", nome || ""); } catch {} },
-  sai() { try { localStorage.removeItem("baratona-token"); localStorage.removeItem("baratona-nome"); } catch {} },
+  sai() { tokenMemoria = ""; try { localStorage.removeItem("baratona-token"); localStorage.removeItem("baratona-nome"); localStorage.removeItem("baratona-anon"); } catch {} },
 };
 
 async function api(path, body) {
@@ -13,7 +26,7 @@ async function api(path, body) {
     : { cache: "no-store" };
   const r = await fetch(path, opts);
   const j = await r.json().catch(() => ({}));
-  if (r.status === 401) { Sessao.sai(); }
+  if (r.status === 401 && !Sessao.anonimo) { Sessao.sai(); }
   if (!r.ok) { const e = new Error(j.erro || "Algo deu errado. Tente de novo."); e.status = r.status; throw e; }
   return j;
 }
@@ -34,7 +47,7 @@ function montaLogin(aoMudar) {
   const tel = $("tel"), msg = $("msg-login"), nomeIn = $("nome-perfil"), sessao = $("sessao");
   const sai = () => { Sessao.sai(); desenha(); aoMudar && aoMudar(); };
   function desenha() {
-    const dentro = !!Sessao.token, n = Sessao.nome;
+    const dentro = Sessao.telefone, n = Sessao.nome;
     if (sessao) {
       sessao.hidden = !dentro; sessao.textContent = "";
       if (dentro) {
@@ -83,7 +96,7 @@ function montaLogin(aoMudar) {
 /* Exige login com nome. Se faltar, abre uma janelinha ali mesmo (sem pular a página até o
    cartão de login) e, depois de entrar, faz o que a pessoa tinha tentado (depois). */
 function precisaLogin(acao, depois) {
-  if (Sessao.token && Sessao.nome) return true;
+  if (Sessao.telefone && Sessao.nome) return true;
   JanelaLogin.abre(acao, depois);
   return false;
 }
@@ -126,7 +139,7 @@ const JanelaLogin = (() => {
       e.preventDefault();
       const bt = e.submitter || dlg.querySelector("button[type=submit]"); bt.disabled = true; erro.textContent = "";
       try {
-        if (!Sessao.token) {
+        if (!Sessao.telefone) {
           const j = await api("/api/entrar", { telefone: tel.value });
           Sessao.salva(j.token, j.nome);
         } else {
@@ -145,7 +158,7 @@ const JanelaLogin = (() => {
     return dlg;
   }
   function mostraPasso() {
-    const comToken = !!Sessao.token;
+    const comToken = Sessao.telefone;
     dlg.querySelector("#dlg-passo-tel").hidden = comToken; dlg.querySelector("#dlg-passo-nome").hidden = !comToken;
     dlg.querySelector("#dlg-titulo").textContent = comToken ? "Como a galera te chama?" : "Entre com seu telefone";
   }
@@ -153,10 +166,10 @@ const JanelaLogin = (() => {
     abre(acao, depois) {
       monta(); pendente = depois || null;
       dlg.querySelector("#dlg-erro").textContent = "";
-      dlg.querySelector("#dlg-msg").textContent = Sessao.token ? `Escreva seu nome para ${acao}.` : `Pra ${acao}, entre com o celular que está na lista da Ceci.`;
+      dlg.querySelector("#dlg-msg").textContent = Sessao.telefone ? `Escreva seu nome para ${acao}.` : `Pra ${acao}, entre com o celular que está na lista da Ceci.`;
       mostraPasso();
       if (!dlg.open) dlg.showModal();
-      dlg.querySelector(Sessao.token ? "#dlg-nome" : "#dlg-tel").focus();
+      dlg.querySelector(Sessao.telefone ? "#dlg-nome" : "#dlg-tel").focus();
     },
   };
 })();
