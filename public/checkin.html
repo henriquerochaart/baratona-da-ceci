@@ -246,7 +246,13 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 .voto .pts.pos{color:var(--pink)}
 .voto .pts.neg{color:var(--anil)}
 .vazio{font-family:var(--f-mao);font-weight:700;font-size:22px;color:var(--tinta-2);text-align:center;padding:8px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* BALANÇO DOS ADESIVOS */
+@keyframes balanca{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+.ad{animation:balanca 2.8s ease-in-out infinite;transform-origin:50% 70%}
+.ad:nth-of-type(2n){animation-duration:3.4s;animation-delay:-1.1s}
+.ad:nth-of-type(3n){animation-duration:2.4s;animation-delay:-.6s;animation-direction:reverse}
+.ad:nth-of-type(5n){animation-duration:3.9s;animation-delay:-2s}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.ad{animation:none}}
 </style>
 <style>
 /* CHECK-IN */

@@ -121,10 +121,16 @@ function iniciaMapa() {
     BARES.forEach((x) => b.extend([x.lon, x.lat])); b.extend([ENCONTRO.lon, ENCONTRO.lat]);
     mapa.fitBounds(b, { padding: 40, duration: 0 });
   });
+  // Casa da Ceci (Rua dos Pinheiros, 1057) é também o ponto de encontro.
   const el = document.createElement("div"); el.className = "pino-enc";
-  el.innerHTML = '<img src="/arte/estrela-laranja.webp" alt=""><span>Encontro · 14h</span>';
+  el.innerHTML = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 18v16h22V18" fill="#FCF6EA" stroke="#D3213C" stroke-width="3.4" stroke-linejoin="round"/>' +
+    '<path d="M17 34v-8.5h6V34" fill="#F49AC2" stroke="#D3213C" stroke-width="3" stroke-linejoin="round"/>' +
+    '<path d="M27 12V6.5h4V15" fill="#FCF6EA" stroke="#D3213C" stroke-width="3" stroke-linejoin="round"/>' +
+    '<path d="M4.5 20.5 20 6.5l15.5 14" fill="none" stroke="#D3213C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+    '<span>Casa da Ceci · 14h</span>';
+  el.setAttribute("aria-label", "Casa da Ceci, ponto de encontro às 14h");
   new maplibregl.Marker({ element: el, anchor: "left", offset: [-20, 0] }).setLngLat([ENCONTRO.lon, ENCONTRO.lat])
-    .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML("<b>Ponto de encontro · 14h</b>Rua dos Pinheiros, 1057")).addTo(mapa);
+    .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML("<b>Casa da Ceci · encontro às 14h</b>Rua dos Pinheiros, 1057")).addTo(mapa);
 }
 function desenhaMapa() {
   if (!mapa) return;

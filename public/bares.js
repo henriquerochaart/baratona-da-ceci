@@ -1,7 +1,7 @@
 /* Pré-lista de bares (fotos do Google Maps) e utilitários. */
 const G = "https://lh3.googleusercontent.com/grass-cs/";
 const F = (k, s = "=s4800-w800-h600") => G + k + s;
-const ENCONTRO = { lat: -23.5681543, lon: -46.6877116 };
+const ENCONTRO = { lat: -23.5683763, lon: -46.687378 }; // Casa da Ceci, R. dos Pinheiros, 1057
 const BARES = [
   ["tantin", "Tantin", "R. dos Pinheiros, 987", -23.5675688, -46.6871967, F("AABkmLeV-CBGoETeSTQKgJDrL3SwoCWY0FUzpOhpwOuxtSK8Hr7NhwDbV84-Sgd9Xfu62pEqdRlpFxT-YtUggAT8RcNU2VlNGBRPxLMO1JH-i_2EMah_2JwQN65heg051OIwRJ7Uth108XlloNM")],
   ["colchetes", "Colchetes", "R. Mateus Grou, 162", -23.5645205, -46.6840381, F("AABkmLcuuN1fKkUrWzY2blw5rwiaEA1__8I5uVS6Ns3ONkq7j89yXAPTjN7rf4FCWwxGmq-mGd1jTS5iDruYK0IJ7vXNBkqnFOgoeoYP8rRStywpgXhVwa3E2oPnKxZRLkVJz2dAmxmkOg")],

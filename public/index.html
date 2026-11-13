@@ -116,7 +116,8 @@ a{color:inherit}
 .bar.sug .thumb{background-color:var(--sol);border-style:dashed}
 
 /* CABEÇALHO E ADESIVOS */
-.topo{position:relative;padding-top:18px;display:flex;justify-content:center}
+.topo{position:relative;padding-top:18px;display:flex;flex-direction:column;align-items:center}
+.topo .boia{display:block;width:min(92%,430px);height:auto;position:relative;z-index:3;margin-top:clamp(-64px,-11vw,-34px);filter:drop-shadow(0 10px 14px rgba(42,29,34,.2))}
 .topo h1{width:100%}
 .topo .logo{display:block;width:min(60%,276px);height:auto;margin:0 auto;position:relative;z-index:2;transform:rotate(-2deg)}
 .ad{position:absolute;pointer-events:none;height:auto;filter:drop-shadow(0 4px 6px rgba(42,29,34,.18));z-index:0}
@@ -167,7 +168,7 @@ a{color:inherit}
 .nome-pino i{font-style:normal;font-size:11px;color:var(--pink);font-weight:700}
 .pino:focus-visible .foto-pino{outline:3px solid var(--pink)}
 .pino-enc{display:flex;align-items:center;gap:4px;font:700 13px var(--f-body);color:var(--vermelho);text-shadow:0 0 3px #fff,0 0 3px #fff}
-.pino-enc img{width:42px;height:auto;filter:drop-shadow(0 2px 3px rgba(42,29,34,.4))}
+.pino-enc svg{width:40px;height:40px;flex:none;filter:drop-shadow(0 2px 3px rgba(42,29,34,.4))}
 .pop{display:flex;flex-direction:column;gap:4px;font:14px var(--f-body);color:var(--tinta)}
 .pop b{font-size:15px}
 .pop span{font-size:12.5px;color:var(--tinta-2)}
@@ -254,7 +255,13 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 .voto .pts.pos{color:var(--pink)}
 .voto .pts.neg{color:var(--anil)}
 .vazio{font-family:var(--f-mao);font-weight:700;font-size:22px;color:var(--tinta-2);text-align:center;padding:8px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* BALANÇO DOS ADESIVOS: cada um no seu ritmo, sem trocar de lugar */
+@keyframes balanca{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+.ad{animation:balanca 2.8s ease-in-out infinite;transform-origin:50% 70%}
+.ad:nth-of-type(2n){animation-duration:3.4s;animation-delay:-1.1s}
+.ad:nth-of-type(3n){animation-duration:2.4s;animation-delay:-.6s;animation-direction:reverse}
+.ad:nth-of-type(5n){animation-duration:3.9s;animation-delay:-2s}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.ad{animation:none}}
 </style>
 </head>
 <body>
@@ -265,6 +272,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
     <img class="ad" src="/arte/cerejas.webp" alt="" style="width:78px;right:-10px;top:0;transform:rotate(14deg)">
     <img class="ad" src="/arte/estrela-laranja.webp" alt="" style="width:40px;right:70px;bottom:6px;transform:rotate(-10deg)">
     <h1 style="margin:0"><img class="logo" src="/arte/logo-vermelho.webp" alt="Baratona da Ceci" width="600" height="448"></h1>
+    <img class="boia" src="/arte/ceci-boia.webp" alt="Ceci numa boia de donut, levantando o copo" width="695" height="849">
   </header>
 
   <section class="hero">
@@ -316,8 +324,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
     <div class="presenca">
       <img class="foto foto-rasgada" src="/arte/foto-beijo.webp" alt="Ceci mandando beijo" width="385" height="355" style="width:128px;transform:rotate(-4deg);margin-top:6px">
       <div class="texto">
-        <p>E CLARO que quero preparar um kitzinho especial pra cada um de vocês! 🎁❤️</p>
-        <p class="fecho">Espero vocês pra comemorar comigo!!!</p>
+        <p class="fecho">Espero vocês 😘</p>
       </div>
     </div>
   </section>
@@ -334,7 +341,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
   <section class="sec" aria-labelledby="t-roteiro">
     <img class="ad" src="/arte/globo.webp" alt="" style="width:84px;right:-6px;top:-34px;transform:rotate(8deg)">
     <h2 id="t-roteiro">Roteiro</h2>
-    <p class="roteiro-txt">Tô montando nosso tour pelos bares e já já mando tudo pra vocês! 🍻</p>
+    <p class="roteiro-txt">Amigos, vocês vão me ajudar a fazer o cronograma dos bares! Então, por favor, votem com a setinha nos bares que vocês mais gostariam e, se quiserem adicionar algum, adicionem aqui também. Bora! 🍻</p>
 
     <div class="contagem" id="contagem" aria-live="off">
       <span class="rot" id="cont-rot">a votação fecha em</span>
