@@ -256,24 +256,29 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 .voto .pts.pos{color:var(--pink)}
 .voto .pts.neg{color:var(--anil)}
 .vazio{font-family:var(--f-mao);font-weight:700;font-size:22px;color:var(--tinta-2);text-align:center;padding:8px}
-/* DESKTOP: hero em cima; convite, recado e login à esquerda; roteiro à direita */
+/* DESKTOP (1040 px ou mais): hero no topo; convite, recado e login lado a lado;
+   roteiro com a lista à esquerda e o mapa fixo à direita. No celular nada muda. */
 .col-esq{display:contents}
 @media (min-width:1040px){
   body{padding-bottom:88px}
-  .wrap{max-width:1200px;display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);column-gap:64px;row-gap:48px;align-items:start}
-  .topo{grid-column:1 / -1;justify-self:center;width:min(100%,640px);padding-top:30px}
+  .wrap{max-width:1200px;gap:56px}
+  .topo{align-self:center;width:min(100%,640px);padding-top:30px}
   .topo .boia{width:min(92%,480px);margin-top:-70px}
-  .col-esq{display:flex;flex-direction:column;gap:44px;grid-column:1;min-width:0}
-  .roteiro{grid-column:2;min-width:0}
-  .roteiro-txt{font-size:18px;max-width:62ch}
-  #mapa{height:540px}
-  .lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch}
-  .chamada,.rodape{grid-column:1 / -1;justify-self:center;width:min(100%,640px)}
+  .col-esq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);gap:32px 40px;align-items:start;position:relative}
+  .col-esq > .hero{display:contents}
+  .hero > .convite{grid-column:1;grid-row:1 / span 2}
+  .hero > .recado{grid-column:2;grid-row:1 / span 2}
+  .col-esq > .entrar{grid-column:3;grid-row:1}
+  .col-esq > .sec{grid-column:3;grid-row:2}
+  .col-esq > .faixa,.col-esq > .toalha{grid-column:1 / -1}
+  .roteiro{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);column-gap:44px;row-gap:0;align-items:start}
+  .roteiro > *{grid-column:1;margin-bottom:16px}
+  .roteiro > .mapa-wrap{grid-column:2;grid-row:1 / span 14;position:sticky;top:20px;margin:0}
+  #mapa{height:min(calc(100vh - 44px),780px)}
+  .roteiro-txt{font-size:18px}
+  .chamada,.rodape{align-self:center;width:min(100%,640px)}
   .bar{transition:border-color .2s}
   .bar:hover{border-color:rgba(228,63,134,.45)}
-}
-@media (min-width:1360px){
-  .wrap{max-width:1280px;grid-template-columns:minmax(0,440px) minmax(0,1fr);column-gap:88px}
 }
 /* BALANÇO DOS ADESIVOS: cada um no seu ritmo, sem trocar de lugar */
 @keyframes balanca{0%,100%{rotate:-3deg}50%{rotate:3deg}}
