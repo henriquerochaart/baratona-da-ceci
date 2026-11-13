@@ -59,12 +59,16 @@ function desenhaLista() {
     const a = document.createElement("a"); a.className = "maps"; a.href = mapsUrl(b); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Google Maps"; meta.append(a);
     if (b.sug) { const s = document.createElement("span"); s.className = "por"; s.textContent = " · sugerido" + (b.por ? " por " + b.por : ""); meta.append(s); }
     if (souAdmin) {
-      const ap = document.createElement("button"); ap.type = "button"; ap.className = "apagar"; ap.textContent = "apagar";
+      const ap = document.createElement("button"); ap.type = "button"; ap.id = "ap-" + b.id;
       ap.setAttribute("aria-label", "Apagar " + b.nome + " da lista"); ap.disabled = ocupado;
-      let armado = null;
+      pintaApagar(ap, estaArmado(b.id));
       ap.onclick = () => {
-        if (!armado) { ap.textContent = "toque de novo pra apagar"; ap.classList.add("armado"); armado = setTimeout(() => { armado = null; ap.textContent = "apagar"; ap.classList.remove("armado"); }, 4000); return; }
-        clearTimeout(armado); armado = null; administra("apagar", b);
+        if (!estaArmado(b.id)) {
+          armado = { id: b.id, t: Date.now() }; pintaApagar(ap, true);
+          setTimeout(() => { if (armado.id === b.id && !estaArmado(b.id)) { armado = { id: null, t: 0 }; const el = $("ap-" + b.id); if (el) pintaApagar(el, false); } }, ARMADO_MS + 50);
+          return;
+        }
+        armado = { id: null, t: 0 }; administra("apagar", b);
       };
       meta.append(" · ", ap);
     }
@@ -273,6 +277,14 @@ async function vota(id, dir) {
 }
 
 /* ---------- admin (Ceci e Henrique): apagar e restaurar bares ---------- */
+// "apagar" pede um segundo toque em até 4 s; o estado fica aqui fora para sobreviver ao redesenho da lista.
+const ARMADO_MS = 4000;
+let armado = { id: null, t: 0 };
+const estaArmado = (id) => armado.id === id && Date.now() - armado.t < ARMADO_MS;
+function pintaApagar(el, ligado) {
+  el.className = "apagar" + (ligado ? " armado" : "");
+  el.textContent = ligado ? "toque de novo pra apagar" : "apagar";
+}
 async function administra(acao, b) {
   if (ocupado) return;
   ocupado = true; tudo();
