@@ -1,7 +1,8 @@
 /* Pré-lista de bares (fotos do Google Maps) e utilitários. */
 const G = "https://lh3.googleusercontent.com/grass-cs/";
 const F = (k, s = "=s4800-w800-h600") => G + k + s;
-const ENCONTRO = { lat: -23.5683763, lon: -46.687378 }; // Casa da Ceci, R. dos Pinheiros, 1057
+// Ponto de encontro: o Tantin. Fica fixo no topo da lista, sem setinhas e fora do ranking.
+const ENCONTRO_ID = "tantin";
 const BARES = [
   ["tantin", "Tantin", "R. dos Pinheiros, 987", -23.5675688, -46.6871967, F("AABkmLeV-CBGoETeSTQKgJDrL3SwoCWY0FUzpOhpwOuxtSK8Hr7NhwDbV84-Sgd9Xfu62pEqdRlpFxT-YtUggAT8RcNU2VlNGBRPxLMO1JH-i_2EMah_2JwQN65heg051OIwRJ7Uth108XlloNM")],
   ["colchetes", "Colchetes", "R. Mateus Grou, 162", -23.5645205, -46.6840381, F("AABkmLcuuN1fKkUrWzY2blw5rwiaEA1__8I5uVS6Ns3ONkq7j89yXAPTjN7rf4FCWwxGmq-mGd1jTS5iDruYK0IJ7vXNBkqnFOgoeoYP8rRStywpgXhVwa3E2oPnKxZRLkVJz2dAmxmkOg")],
@@ -36,6 +37,7 @@ const BARES = [
   ["paroquia", "Bar Paróquia", "R. Wisard, 426", -23.5560145, -46.6910304, ""],
   ["bardobaixo", "Bar do Baixo", "R. Girassol", -23.557888, -46.687707, ""],
 ].map(([id, nome, end, lat, lon, foto]) => ({ id, nome, end, lat, lon, foto, sug: false }));
+const ENCONTRO = BARES.find((b) => b.id === ENCONTRO_ID);
 
 
 const norm = (t) => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();

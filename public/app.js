@@ -33,9 +33,9 @@ function base() {
   sugestoes.forEach((s) => { const k = norm(s.nome); if (!k || vistos.has(k)) return; vistos.add(k); extra.push(s); });
   return [...BARES, ...extra];
 }
-const todos = () => base().filter((b) => !ocultos.has(b.id));
+const todos = () => base().filter((b) => b.id === ENCONTRO_ID || !ocultos.has(b.id));
 const foiApagado = (k) => base().some((b) => ocultos.has(b.id) && norm(b.nome) === k);
-const ranking = () => todos().sort((a, b) => (pontos[b.id] || 0) - (pontos[a.id] || 0) || a.nome.localeCompare(b.nome, "pt"));
+const ranking = () => todos().filter((b) => b.id !== ENCONTRO_ID).sort((a, b) => (pontos[b.id] || 0) - (pontos[a.id] || 0) || a.nome.localeCompare(b.nome, "pt"));
 const SETA = (up) => `<svg viewBox="0 0 22 18" aria-hidden="true"><path d="${up ? "M11 2L20 15H2Z" : "M11 16L20 3H2Z"}" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
 
 function desenhaLista() {
@@ -43,22 +43,24 @@ function desenhaLista() {
   const rank = ranking(), pos = {}; rank.forEach((b, i) => (pos[b.id] = i + 1));
   let itens = ordem === "az" ? [...rank].sort((a, b) => a.nome.localeCompare(b.nome, "pt")) : rank;
   const q = norm(busca);
+  if (ENCONTRO) itens = [ENCONTRO, ...itens];
   if (q) itens = itens.filter((b) => norm(b.nome + " " + (b.end || "")).includes(q));
   if (!itens.length) { const li = document.createElement("li"); li.className = "vazio"; li.textContent = "Nenhum bar com esse nome na lista."; ul.append(li); return; }
   itens.forEach((b) => {
-    const li = document.createElement("li"); li.className = "bar" + (b.sug ? " sug" : ""); li.id = "bar-" + b.id;
+    const enc = b.id === ENCONTRO_ID;
+    const li = document.createElement("li"); li.className = "bar" + (b.sug ? " sug" : "") + (enc ? " encontro" : ""); li.id = "bar-" + b.id;
     const fita = document.createElement("span"); fita.className = "fita"; fita.setAttribute("aria-hidden", "true");
     const th = document.createElement("button"); th.type = "button"; th.className = "thumb"; th.title = "Ver no mapa";
     th.setAttribute("aria-label", "Ver " + b.nome + " no mapa");
     if (b.foto) th.style.backgroundImage = `url("${b.foto}")`; else th.textContent = inicial(b.nome);
     th.onclick = () => voaPara(b, true);
-    const p = document.createElement("span"); p.className = "pos"; p.textContent = pos[b.id]; th.append(p);
+    const p = document.createElement("span"); p.className = "pos"; p.textContent = enc ? "📍" : pos[b.id]; th.append(p);
     const h = document.createElement("h3"); h.textContent = b.nome;
     const meta = document.createElement("p"); meta.className = "meta";
     if (b.end) meta.append(b.end + " · ");
     const a = document.createElement("a"); a.className = "maps"; a.href = mapsUrl(b); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Google Maps"; meta.append(a);
     if (b.sug) { const s = document.createElement("span"); s.className = "por"; s.textContent = " · sugerido" + (b.por ? " por " + b.por : ""); meta.append(s); }
-    if (souAdmin) {
+    if (souAdmin && !enc) {
       const ap = document.createElement("button"); ap.type = "button"; ap.id = "ap-" + b.id;
       ap.setAttribute("aria-label", "Apagar " + b.nome + " da lista"); ap.disabled = ocupado;
       pintaApagar(ap, estaArmado(b.id));
@@ -71,6 +73,11 @@ function desenhaLista() {
         armado = { id: null, t: 0 }; administra("apagar", b);
       };
       meta.append(" · ", ap);
+    }
+    if (enc) {
+      const selo = document.createElement("span"); selo.className = "selo-enc";
+      selo.innerHTML = "Ponto de<br>encontro<b>13h</b>";
+      li.append(fita, th, h, selo, meta); ul.append(li); return;
     }
     const v = document.createElement("div"); v.className = "voto";
     const meu = meusVotos[b.id] || 0, n = pontos[b.id] || 0;
@@ -121,16 +128,6 @@ function iniciaMapa() {
     BARES.forEach((x) => b.extend([x.lon, x.lat])); b.extend([ENCONTRO.lon, ENCONTRO.lat]);
     mapa.fitBounds(b, { padding: 40, duration: 0 });
   });
-  // Casa da Ceci (Rua dos Pinheiros, 1057) é também o ponto de encontro.
-  const el = document.createElement("div"); el.className = "pino-enc";
-  el.innerHTML = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 18v16h22V18" fill="#FCF6EA" stroke="#D3213C" stroke-width="3.4" stroke-linejoin="round"/>' +
-    '<path d="M17 34v-8.5h6V34" fill="#F49AC2" stroke="#D3213C" stroke-width="3" stroke-linejoin="round"/>' +
-    '<path d="M27 12V6.5h4V15" fill="#FCF6EA" stroke="#D3213C" stroke-width="3" stroke-linejoin="round"/>' +
-    '<path d="M4.5 20.5 20 6.5l15.5 14" fill="none" stroke="#D3213C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-    '<span>Casa da Ceci · 13h</span>';
-  el.setAttribute("aria-label", "Casa da Ceci, ponto de encontro às 13h");
-  new maplibregl.Marker({ element: el, anchor: "left", offset: [-20, 0] }).setLngLat([ENCONTRO.lon, ENCONTRO.lat])
-    .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML("<b>Casa da Ceci · encontro às 13h</b>Rua dos Pinheiros, 1057")).addTo(mapa);
 }
 function desenhaMapa() {
   if (!mapa) return;
@@ -149,6 +146,10 @@ function desenhaMapa() {
     }
     const el = m.getElement();
     el.classList.toggle("up", meu === 1); el.classList.toggle("down", meu === -1); el.classList.toggle("sug", !!b.sug);
+    if (b.id === ENCONTRO_ID) {
+      el.classList.add("encontro"); el.querySelector("i").textContent = "📍 Encontro · 13h";
+      el.setAttribute("aria-label", `${b.nome}, ponto de encontro às 13h`); return;
+    }
     el.querySelector("i").textContent = (n > 0 ? "▲ " : n < 0 ? "▼ " : "") + n + (Math.abs(n) === 1 ? " ponto" : " pontos");
     el.setAttribute("aria-label", `${b.nome}, ${n} pontos`);
   });
@@ -161,6 +162,13 @@ function abrePopup(b) {
   const div = document.createElement("div"); div.className = "pop";
   div.innerHTML = (b.foto ? `<span class="pop-foto" style="background-image:url('${b.foto}')"></span>` : "") +
     `<b>${esc(b.nome)}</b><span>${esc(b.end || "")}</span>`;
+  if (b.id === ENCONTRO_ID) {
+    const enc = document.createElement("span"); enc.className = "pop-enc"; enc.textContent = "📍 Ponto de encontro · 13h";
+    const gm = document.createElement("a"); gm.href = mapsUrl(b); gm.target = "_blank"; gm.rel = "noopener"; gm.textContent = "Abrir no Google Maps";
+    div.append(enc, gm);
+    popup = new maplibregl.Popup({ offset: 26, maxWidth: "240px" }).setLngLat([b.lon, b.lat]).setDOMContent(div).addTo(mapa);
+    return;
+  }
   const linha = document.createElement("div"); linha.className = "pop-votos";
   const up = document.createElement("button"); up.type = "button"; up.className = "up"; up.innerHTML = SETA(true); up.setAttribute("aria-pressed", String(meu === 1)); up.setAttribute("aria-label", "Votar a favor");
   const pt = document.createElement("strong"); pt.textContent = n;
