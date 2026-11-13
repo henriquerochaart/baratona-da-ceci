@@ -127,10 +127,10 @@ function iniciaMapa() {
     '<path d="M17 34v-8.5h6V34" fill="#F49AC2" stroke="#D3213C" stroke-width="3" stroke-linejoin="round"/>' +
     '<path d="M27 12V6.5h4V15" fill="#FCF6EA" stroke="#D3213C" stroke-width="3" stroke-linejoin="round"/>' +
     '<path d="M4.5 20.5 20 6.5l15.5 14" fill="none" stroke="#D3213C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-    '<span>Casa da Ceci · 14h</span>';
-  el.setAttribute("aria-label", "Casa da Ceci, ponto de encontro às 14h");
+    '<span>Casa da Ceci · 13h</span>';
+  el.setAttribute("aria-label", "Casa da Ceci, ponto de encontro às 13h");
   new maplibregl.Marker({ element: el, anchor: "left", offset: [-20, 0] }).setLngLat([ENCONTRO.lon, ENCONTRO.lat])
-    .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML("<b>Casa da Ceci · encontro às 14h</b>Rua dos Pinheiros, 1057")).addTo(mapa);
+    .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML("<b>Casa da Ceci · encontro às 13h</b>Rua dos Pinheiros, 1057")).addTo(mapa);
 }
 function desenhaMapa() {
   if (!mapa) return;
