@@ -256,6 +256,25 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 .voto .pts.pos{color:var(--pink)}
 .voto .pts.neg{color:var(--anil)}
 .vazio{font-family:var(--f-mao);font-weight:700;font-size:22px;color:var(--tinta-2);text-align:center;padding:8px}
+/* DESKTOP: hero em cima; convite, recado e login à esquerda; roteiro à direita */
+.col-esq{display:contents}
+@media (min-width:1040px){
+  body{padding-bottom:88px}
+  .wrap{max-width:1200px;display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);column-gap:64px;row-gap:48px;align-items:start}
+  .topo{grid-column:1 / -1;justify-self:center;width:min(100%,640px);padding-top:30px}
+  .topo .boia{width:min(92%,480px);margin-top:-70px}
+  .col-esq{display:flex;flex-direction:column;gap:44px;grid-column:1;min-width:0}
+  .roteiro{grid-column:2;min-width:0}
+  .roteiro-txt{font-size:18px;max-width:62ch}
+  #mapa{height:540px}
+  .lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch}
+  .chamada,.rodape{grid-column:1 / -1;justify-self:center;width:min(100%,640px)}
+  .bar{transition:border-color .2s}
+  .bar:hover{border-color:rgba(228,63,134,.45)}
+}
+@media (min-width:1360px){
+  .wrap{max-width:1280px;grid-template-columns:minmax(0,440px) minmax(0,1fr);column-gap:88px}
+}
 /* BALANÇO DOS ADESIVOS: cada um no seu ritmo, sem trocar de lugar */
 @keyframes balanca{0%,100%{rotate:-3deg}50%{rotate:3deg}}
 .ad{animation:balanca 2.8s ease-in-out infinite;transform-origin:50% 70%}
@@ -276,6 +295,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
     <img class="boia" src="/arte/ceci-boia.webp" alt="Ceci numa boia de donut, levantando o copo" width="695" height="849">
   </header>
 
+  <div class="col-esq">
   <section class="hero">
     <img class="ad" src="/arte/spritz.webp" alt="" style="width:66px;left:-14px;top:-20px;transform:rotate(-14deg);z-index:2">
     <img class="ad" src="/arte/beijo.webp" alt="" style="width:86px;right:-14px;bottom:-26px;transform:rotate(10deg);z-index:2">
@@ -338,8 +358,9 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
   </div>
 
   <div class="toalha" aria-hidden="true"></div>
+  </div>
 
-  <section class="sec" aria-labelledby="t-roteiro">
+  <section class="sec roteiro" aria-labelledby="t-roteiro">
     <img class="ad" src="/arte/globo.webp" alt="" style="width:84px;right:-6px;top:-34px;transform:rotate(8deg)">
     <h2 id="t-roteiro">Roteiro</h2>
     <p class="roteiro-txt">Amigos, vocês vão me ajudar a fazer o cronograma dos bares! Então, por favor, votem com a setinha nos bares que vocês mais gostariam e, se quiserem adicionar algum, adicionem aqui também. Bora! 🍻</p>
