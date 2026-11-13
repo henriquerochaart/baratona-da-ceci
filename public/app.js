@@ -2,7 +2,7 @@ const $ = (id) => document.getElementById(id);
 
 let meusVotos = {}, pontos = {}, votantes = 0, sugestoes = [];
 let ordem = "votos", busca = "", ocupado = false, carregou = false;
-let prazo = Date.parse("2026-11-15T23:59:59-03:00"), votacaoAberta = Date.now() <= prazo;
+let prazo = Date.parse("2026-11-18T23:59:59-03:00"), votacaoAberta = Date.now() <= prazo;
 
 /* ---------- dados ---------- */
 async function carrega() {

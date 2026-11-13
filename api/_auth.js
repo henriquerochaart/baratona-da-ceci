@@ -38,8 +38,8 @@ export function quem(token) {
   return c ? { token, nome: c.nome } : null;
 }
 
-// Votação até domingo 15/11/2026, 23:59 em São Paulo.
-export const PRAZO = "2026-11-15T23:59:59-03:00";
+// Votação até quarta 18/11/2026, 23:59 em São Paulo.
+export const PRAZO = "2026-11-18T23:59:59-03:00";
 export const votacaoAberta = () => Date.now() <= Date.parse(PRAZO);
 
 // Check-in: dia 28/11 (das 10h às 6h do dia 29), ou sempre se CHECKIN_LIBERADO=1.
