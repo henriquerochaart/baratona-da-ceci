@@ -76,6 +76,7 @@ a{color:inherit}
 .presenca .texto{display:flex;flex-direction:column;gap:14px;min-width:0}
 .presenca p{font-size:16px}
 .fecho{font-family:var(--f-marker);color:var(--vermelho);font-size:24px;line-height:1.15;transform:rotate(-2deg)}
+.fecho-final{font-size:clamp(34px,10vw,48px);text-align:center;align-self:center;margin:8px 0 -18px}
 
 .toalha{height:26px;background:repeating-conic-gradient(var(--pink) 0 25%,#F8C8DC 0 50%) 0 0/26px 26px;transform:rotate(-.8deg);box-shadow:0 2px 0 rgba(42,29,34,.12)}
 
@@ -285,12 +286,11 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
   .wrap{max-width:1200px;gap:56px}
   .topo{align-self:center;width:min(100%,640px);padding-top:30px}
   .topo .boia{width:min(92%,480px);margin-top:-70px}
-  .col-esq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);gap:32px 40px;align-items:start;position:relative}
+  .col-esq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.45fr);gap:32px 48px;align-items:start;position:relative;align-self:center;width:min(100%,940px)}
   .col-esq > .hero{display:contents}
   .hero > .convite{grid-column:1;grid-row:1 / span 2}
   .hero > .recado{grid-column:2;grid-row:1 / span 2}
-  .col-esq > .sec{grid-column:3;grid-row:1 / span 2;align-self:center}
-  .col-esq > .faixa,.col-esq > .toalha{grid-column:1 / -1}
+  .col-esq > .toalha{grid-column:1 / -1}
   .roteiro{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);column-gap:44px;row-gap:0;align-items:start}
   .roteiro > *{grid-column:1;margin-bottom:16px}
   .roteiro > .mapa-wrap{grid-column:2;grid-row:1 / span 14;position:sticky;top:20px;margin:0}
@@ -340,29 +340,13 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
     </div>
     <div class="recado papel">
       <span class="fita"></span>
+      <img class="ad" src="/arte/tarot.webp" alt="" style="width:58px;left:-20px;bottom:-34px;transform:rotate(-10deg);z-index:2">
       <p>Dia 28/11 vou comemorar meu aniversário de um jeito especial: com uma BARATONA pelo meu novo bairro, Pinheiros!!! 🥳</p>
       <p>A missão é simples (ou nem tanto kkkkk): passar por 26 bares JUNTOS em homenagem aos meus 26 aninhos! 🍺</p>
       <em>Calma, ninguém vai precisar correr! Vamos no pace fofoca mesmo ok?</em>
     </div>
   </section>
 
-
-  <section class="sec">
-    <img class="ad" src="/arte/coracao-rosa.webp" alt="" style="width:36px;right:8px;top:4px;transform:rotate(12deg)">
-    <div class="presenca">
-      <img class="foto foto-rasgada" src="/arte/foto-beijo.webp" alt="Ceci mandando beijo" width="385" height="355" style="width:128px;transform:rotate(-4deg);margin-top:6px">
-      <div class="texto">
-        <p class="fecho">Espero vocês 😘</p>
-      </div>
-    </div>
-  </section>
-
-  <div class="faixa" aria-hidden="true">
-    <img class="ad" src="/arte/tarot.webp" alt="" style="width:74px;left:6px;top:0;transform:rotate(-9deg)">
-    <img class="ad" src="/arte/coracao-globo.webp" alt="" style="width:96px;left:42%;top:10px;transform:rotate(6deg)">
-    <img class="ad" src="/arte/estrela-dourada.webp" alt="" style="width:40px;right:110px;top:6px">
-    <img class="ad" src="/arte/borboleta.webp" alt="" style="width:92px;right:0;top:14px;transform:rotate(12deg)">
-  </div>
 
   <div class="toalha" aria-hidden="true"></div>
   </div>
@@ -386,6 +370,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
     <span id="lugar-busca" hidden></span>
     <form class="busca papel" id="busca" autocomplete="off">
       <span class="fita"></span>
+      <img class="ad" src="/arte/coracao-globo.webp" alt="" style="width:70px;right:-18px;top:-30px;transform:rotate(9deg);z-index:2">
       <label for="q">Buscar ou sugerir bar</label>
       <input id="q" type="search" placeholder="Nome do bar" maxlength="60">
       <ul class="resultados" id="resultados" aria-live="polite"></ul>
@@ -424,6 +409,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
   </section>
 
 
+  <p class="fecho fecho-final">Espero vocês 😘</p>
   <footer class="rodape" aria-hidden="true">
     <img src="/arte/onca.webp" alt="" style="width:150px;transform:rotate(-6deg)">
     <img src="/arte/vinil.webp" alt="" style="width:110px;margin-left:-30px;transform:rotate(10deg)">
