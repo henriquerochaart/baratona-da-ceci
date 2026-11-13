@@ -252,7 +252,7 @@ formBusca.addEventListener("submit", (e) => {
   sugere({ nome, end: rua.value.trim() });
 });
 async function sugere(item) {
-  if (ocupado || !precisaLogin("sugerir um bar")) { if (mapaWrap.classList.contains("cheia")) telaCheia(false); return; }
+  if (ocupado || !precisaLogin("sugerir um bar", () => sugere(item))) return;
   ocupado = true; add.disabled = true; res.querySelectorAll("button").forEach((b) => (b.disabled = true));
   try {
     const j = await api("/api/sugestao", { item });
@@ -271,7 +271,7 @@ async function sugere(item) {
 /* ---------- votos ---------- */
 async function vota(id, dir) {
   if (ocupado || !votacaoAberta) return;
-  if (!precisaLogin("votar")) { if (mapaWrap.classList.contains("cheia")) telaCheia(false); return; }
+  if (!precisaLogin("votar", () => vota(id, dir))) return;
   const antes = { ...meusVotos }, prox = { ...meusVotos };
   if (prox[id] === dir) delete prox[id]; else prox[id] = dir;
   pontos[id] = (pontos[id] || 0) - (antes[id] || 0) + (prox[id] || 0);

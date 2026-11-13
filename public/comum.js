@@ -64,17 +64,88 @@ function montaLogin(aoMudar) {
   });
   $("sair").addEventListener("click", () => { Sessao.sai(); desenha(); aoMudar && aoMudar(); tel.focus(); });
   desenha();
+  // A janelinha de login (JanelaLogin) avisa a página por aqui: redesenha o cartão e recarrega os dados.
+  window.aoEntrar = async () => { desenha(); if (aoMudar) await aoMudar(); };
   return { desenha };
 }
 
-/* Exige login com nome; leva a pessoa ao cartão de login se faltar. */
-function precisaLogin(acao) {
+/* Exige login com nome. Se faltar, abre uma janelinha ali mesmo (sem pular a página até o
+   cartão de login) e, depois de entrar, faz o que a pessoa tinha tentado (depois). */
+function precisaLogin(acao, depois) {
   if (Sessao.token && Sessao.nome) return true;
-  const card = document.getElementById("entrar");
-  const msg = document.getElementById("msg-login");
-  if (msg) msg.textContent = Sessao.token ? "Escreva seu nome para " + acao + "." : "Entre com seu telefone para " + acao + ".";
-  if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
-  const alvo = document.getElementById(Sessao.token ? "nome-perfil" : "tel");
-  if (alvo) setTimeout(() => alvo.focus(), 400);
+  JanelaLogin.abre(acao, depois);
   return false;
 }
+
+const JanelaLogin = (() => {
+  let dlg = null, pendente = null;
+  const css = `
+.dlg-login{border:2px solid var(--tinta);border-radius:16px;padding:0;background:var(--papel-2);color:var(--tinta);width:min(92vw,400px);box-shadow:6px 6px 0 var(--pink)}
+.dlg-login::backdrop{background:rgba(42,29,34,.45)}
+.dlg-login form{padding:22px 18px 18px;display:flex;flex-direction:column;gap:10px;position:relative}
+.dlg-login h2{font-family:var(--f-marker);color:var(--vermelho);font-size:30px;line-height:1;margin:0 34px 0 0;transform:rotate(-1.5deg);font-weight:400}
+.dlg-login .dlg-msg{font-size:15px;margin:0}
+.dlg-login label{font-family:var(--f-maquina);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2)}
+.dlg-login .dlg-linha{display:flex;gap:8px}
+.dlg-login input{flex:1;min-width:0;font:18px var(--f-body);color:var(--tinta);background:var(--papel);border:2px solid var(--tinta);border-radius:10px;padding:11px 12px}
+.dlg-login button[type=submit]{font:700 16px var(--f-body);background:var(--vermelho);color:var(--papel-2);border:2px solid var(--tinta);border-radius:10px;padding:10px 16px;cursor:pointer;flex:none}
+.dlg-login button[type=submit]:disabled{opacity:.5;cursor:default}
+.dlg-login .dlg-x{position:absolute;top:10px;right:10px;width:36px;height:36px;border:0;background:none;font:400 26px/1 var(--f-body);color:var(--tinta-2);cursor:pointer;border-radius:8px}
+.dlg-login .dlg-erro{font-size:14px;color:var(--vermelho);margin:0;min-height:1.2em}
+.dlg-login input:focus-visible,.dlg-login button:focus-visible{outline:3px solid var(--pink);outline-offset:2px}`;
+  function monta() {
+    if (dlg) return dlg;
+    const st = document.createElement("style"); st.textContent = css; document.head.append(st);
+    dlg = document.createElement("dialog"); dlg.className = "dlg-login"; dlg.setAttribute("aria-labelledby", "dlg-titulo");
+    dlg.innerHTML = `<form novalidate>
+      <button type="button" class="dlg-x" aria-label="Fechar">×</button>
+      <h2 id="dlg-titulo">Entre com seu telefone</h2>
+      <p class="dlg-msg" id="dlg-msg"></p>
+      <div id="dlg-passo-tel"><label for="dlg-tel">Seu celular com DDD</label>
+        <div class="dlg-linha"><input id="dlg-tel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 99999-9999" maxlength="20"><button type="submit">Entrar</button></div></div>
+      <div id="dlg-passo-nome" hidden><label for="dlg-nome">Seu nome</label>
+        <div class="dlg-linha"><input id="dlg-nome" type="text" maxlength="40" autocomplete="name" placeholder="Como a galera te chama"><button type="submit">Salvar</button></div></div>
+      <p class="dlg-erro" id="dlg-erro" aria-live="polite"></p></form>`;
+    document.body.append(dlg);
+    const q = (id) => dlg.querySelector("#" + id), tel = q("dlg-tel"), nome = q("dlg-nome"), erro = q("dlg-erro");
+    tel.addEventListener("input", () => { tel.value = formataTel(tel.value); });
+    dlg.querySelector(".dlg-x").onclick = () => dlg.close();
+    dlg.addEventListener("close", () => { pendente = null; });
+    dlg.querySelector("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const bt = e.submitter || dlg.querySelector("button[type=submit]"); bt.disabled = true; erro.textContent = "";
+      try {
+        if (!Sessao.token) {
+          const j = await api("/api/entrar", { telefone: tel.value });
+          Sessao.salva(j.token, j.nome);
+        } else {
+          const j = await api("/api/perfil", { nome: nome.value });
+          Sessao.nomeAtual(j.nome);
+        }
+        if (!Sessao.nome) { mostraPasso(); nome.focus(); }
+        else {
+          const fazer = pendente; pendente = null; dlg.close();
+          if (typeof window.aoEntrar === "function") await window.aoEntrar();
+          if (fazer) fazer();
+        }
+      } catch (err) { erro.textContent = err.message; if (err.status === 401) mostraPasso(); }
+      bt.disabled = false;
+    });
+    return dlg;
+  }
+  function mostraPasso() {
+    const comToken = !!Sessao.token;
+    dlg.querySelector("#dlg-passo-tel").hidden = comToken; dlg.querySelector("#dlg-passo-nome").hidden = !comToken;
+    dlg.querySelector("#dlg-titulo").textContent = comToken ? "Como a galera te chama?" : "Entre com seu telefone";
+  }
+  return {
+    abre(acao, depois) {
+      monta(); pendente = depois || null;
+      dlg.querySelector("#dlg-erro").textContent = "";
+      dlg.querySelector("#dlg-msg").textContent = Sessao.token ? `Escreva seu nome para ${acao}.` : `Pra ${acao}, entre com o celular que está na lista da Ceci.`;
+      mostraPasso();
+      if (!dlg.open) dlg.showModal();
+      dlg.querySelector(Sessao.token ? "#dlg-nome" : "#dlg-tel").focus();
+    },
+  };
+})();
