@@ -210,6 +210,10 @@ const JanelaLogin = (() => {
   const primeiroToque = () => { toca(); ["pointerdown", "keydown", "touchstart"].forEach((t) => document.removeEventListener(t, primeiroToque, true)); };
   ["pointerdown", "keydown", "touchstart"].forEach((t) => document.addEventListener(t, primeiroToque, true));
   document.addEventListener("visibilitychange", () => { if (document.hidden) audio.pause(); else toca(); });
-  const monta = () => { document.head.append(st); document.body.append(bt); audio.src = ARQ; pinta(); };
+  const monta = () => {
+    document.head.append(st); document.body.append(bt); audio.src = ARQ; pinta();
+    /* iPhone não pré-carrega áudio (canplay só vem depois do toque): confere o arquivo direto. */
+    fetch(ARQ, { method: "HEAD" }).then((r) => { if (r.ok) { bt.hidden = false; pinta(); } }).catch(() => {});
+  };
   if (document.body) monta(); else document.addEventListener("DOMContentLoaded", monta);
 })();
