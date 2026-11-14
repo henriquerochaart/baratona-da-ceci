@@ -222,7 +222,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 .busca .dica{font-size:13.5px;color:var(--tinta-2);line-height:1.35}
 .status{font-family:var(--f-maquina);font-size:13px;background:var(--tinta);color:var(--papel-2);padding:10px 12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;transform:rotate(-.6deg)}
 .status b{color:var(--sol);font-weight:400}
-.aviso{font-size:14px;background:var(--papel-2);border-left:4px solid var(--pink);padding:10px 12px}
+.aviso{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:10000;width:min(92vw,440px);font:600 15px var(--f-body);background:var(--tinta);color:var(--papel-2);border-left:5px solid var(--pink);border-radius:10px;padding:12px 14px;box-shadow:0 8px 22px rgba(42,29,34,.35)}
 .filtros{display:flex;gap:8px;flex-wrap:wrap}
 .filtros button{font:13px var(--f-maquina);border:2px solid var(--tinta);background:var(--papel-2);color:var(--tinta);border-radius:999px;padding:7px 14px;cursor:pointer}
 .filtros button[aria-pressed="true"]{background:var(--anil);color:var(--papel-2);border-color:var(--anil)}
@@ -393,7 +393,7 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 
     <div class="status" id="status" aria-live="polite"><span>carregando votos…</span></div>
     <p class="sessao" id="sessao" hidden></p>
-    <div class="aviso" id="aviso" hidden></div>
+    <div class="aviso" id="aviso" role="alert" hidden></div>
     <div class="admin papel" id="admin" hidden>
       <span class="fita"></span>
       <h3>Admin · bares apagados</h3>

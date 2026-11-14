@@ -95,7 +95,8 @@ function desenhaLista() {
 function atualizaStatus() {
   $("status").innerHTML = `<span><b>${votantes}</b> ${votantes === 1 ? "pessoa votou" : "pessoas votaram"}</span><span><b>${todos().length}</b> bares na lista</span>`;
 }
-function aviso(t) { const a = $("aviso"); a.textContent = t || ""; a.hidden = !t; }
+let avisoTimer = null;
+function aviso(t) { const a = $("aviso"); a.textContent = t || ""; a.hidden = !t; clearTimeout(avisoTimer); if (t) avisoTimer = setTimeout(() => { a.hidden = true; }, 7000); }
 
 /* ---------- contagem regressiva ---------- */
 function relogio() {
@@ -339,5 +340,5 @@ const login = montaLogin(() => carrega());
 if (/[?&]admin\b/.test(location.search) && !Sessao.telefone) JanelaLogin.abre("entrar como admin");
 iniciaMapa(); tudo(); carrega(); relogio();
 setInterval(relogio, 1000);
-setInterval(() => { if (!document.hidden && !ocupado) carrega(); }, 20000);
+setInterval(() => { if (!document.hidden && !ocupado) carrega(); }, 60000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) carrega(); });

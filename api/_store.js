@@ -1,59 +1,45 @@
-import { put, list, del } from "@vercel/blob";
+import { neon } from "@neondatabase/serverless";
 
-// Cada pessoa grava seus próprios arquivos: votos/<voter>/..., sugestoes/<voter>/..., checkins/<voter>/...
-// O arquivo mais recente de cada pessoa vale; os antigos são apagados na leitura.
-// "ocultos" é um arquivo só, dos admins, guardado em GERAL: a lista de bares apagados.
+// Tudo fica numa tabela só do Postgres (Neon): uma linha por coleção + pessoa.
+// Coleções: votos, sugestoes, perfil, checkins e ocultos ("ocultos" é uma linha só, dos admins, em GERAL).
+// Antes era Vercel Blob, mas cada leitura listava arquivos e a cota gratuita estourou em 13/11.
 export const COLECOES = ["votos", "sugestoes", "perfil", "checkins", "ocultos"];
 export const GERAL = "0".repeat(32);
 const VOTER = /^[a-f0-9]{32}$/;
 export const validVoter = (v) => typeof v === "string" && VOTER.test(v);
 
-export async function grava(colecao, voter, dados) {
-  await put(`${colecao}/${voter}/d.json`, JSON.stringify(dados), {
-    access: "public",
-    addRandomSuffix: true,
-    contentType: "application/json",
-    cacheControlMaxAge: 31536000,
-  });
-  cache = null;
-}
+const URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
+const sql = URL ? neon(URL) : null;
+let pronto = null;
 
-async function listaTudo(prefix) {
-  const blobs = [];
-  let cursor;
-  do {
-    const r = await list({ prefix, cursor, limit: 1000 });
-    blobs.push(...r.blobs);
-    cursor = r.hasMore ? r.cursor : undefined;
-  } while (cursor);
-  return blobs;
-}
-
-async function leColecao(colecao) {
-  const blobs = await listaTudo(colecao + "/");
-  const porVoter = new Map();
-  const velhos = [];
-  for (const b of blobs) {
-    const voter = b.pathname.split("/")[1];
-    if (!validVoter(voter)) continue;
-    const atual = porVoter.get(voter);
-    if (!atual) porVoter.set(voter, b);
-    else if (new Date(b.uploadedAt) > new Date(atual.uploadedAt)) { velhos.push(atual.url); porVoter.set(voter, b); }
-    else velhos.push(b.url);
+function banco() {
+  if (!sql) throw new Error("Banco não configurado (DATABASE_URL).");
+  if (!pronto) {
+    pronto = sql.query(`create table if not exists baratona_dados (
+      colecao text not null, voter text not null, dados jsonb not null,
+      at timestamptz not null default now(), primary key (colecao, voter))`).catch((e) => { pronto = null; throw e; });
   }
-  if (velhos.length) del(velhos).catch(() => {});
-  const out = {};
-  await Promise.all([...porVoter].map(async ([voter, b]) => {
-    try { const r = await fetch(b.url); if (r.ok) out[voter] = await r.json(); } catch {}
-  }));
-  return out;
+  return pronto;
+}
+
+export async function grava(colecao, voter, dados) {
+  if (!COLECOES.includes(colecao) || !validVoter(voter)) throw new Error("Gravação inválida.");
+  await banco();
+  await sql.query(
+    `insert into baratona_dados (colecao, voter, dados, at) values ($1, $2, $3::jsonb, now())
+     on conflict (colecao, voter) do update set dados = excluded.dados, at = now()`,
+    [colecao, voter, JSON.stringify(dados)],
+  );
+  cache = null;
 }
 
 let cache = null;
 export async function estado() {
-  if (cache && Date.now() - cache.t < 4000) return cache.v;
-  const [votos, sugestoes, perfil, checkins, ocultos] = await Promise.all(COLECOES.map(leColecao));
-  const v = { votos, sugestoes, perfil, checkins, ocultos };
+  if (cache && Date.now() - cache.t < 3000) return cache.v;
+  await banco();
+  const linhas = await sql.query("select colecao, voter, dados from baratona_dados");
+  const v = Object.fromEntries(COLECOES.map((c) => [c, {}]));
+  for (const l of linhas) if (v[l.colecao] && validVoter(l.voter)) v[l.colecao][l.voter] = l.dados;
   cache = { t: Date.now(), v };
   return v;
 }
