@@ -173,3 +173,43 @@ const JanelaLogin = (() => {
     },
   };
 })();
+
+/* Música de fundo: toca em loop depois do primeiro toque na página (os navegadores não deixam
+   tocar som antes disso). O botão fixo liga e desliga; a escolha fica guardada no navegador.
+   O botão só aparece se o arquivo /musica.mp3 existir. */
+(() => {
+  const ARQ = "/musica.mp3", CHAVE = "baratona-mudo";
+  let mudo = false;
+  try { mudo = localStorage.getItem(CHAVE) === "1"; } catch {}
+  const audio = new Audio(); audio.loop = true; audio.volume = 0.35; audio.preload = "auto";
+  const st = document.createElement("style");
+  st.textContent = `.som{position:fixed;right:max(14px,env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));z-index:9000;width:48px;height:48px;border-radius:50%;border:2px solid var(--tinta,#2A1D22);background:var(--sol,#F7C548);color:var(--tinta,#2A1D22);font-size:22px;line-height:1;display:grid;place-items:center;cursor:pointer;box-shadow:3px 3px 0 var(--tinta,#2A1D22)}
+.som[aria-pressed="true"]{background:var(--papel-2,#FCF6EA)}
+.som:focus-visible{outline:3px solid var(--pink,#E43F86);outline-offset:3px}
+.som.tocando{animation:pulsa 1.4s ease-in-out infinite}
+@keyframes pulsa{50%{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.som.tocando{animation:none}}`;
+  const bt = document.createElement("button");
+  bt.type = "button"; bt.className = "som"; bt.hidden = true;
+  const pinta = () => {
+    bt.textContent = mudo ? "🔇" : "🔊";
+    bt.setAttribute("aria-pressed", String(mudo));
+    bt.setAttribute("aria-label", mudo ? "Ligar a música" : "Desligar a música");
+    bt.classList.toggle("tocando", !mudo && !audio.paused);
+  };
+  const toca = () => { if (mudo) return; audio.play().then(pinta).catch(() => {}); };
+  bt.addEventListener("click", (e) => {
+    e.stopPropagation();
+    mudo = !mudo;
+    try { localStorage.setItem(CHAVE, mudo ? "1" : "0"); } catch {}
+    if (mudo) audio.pause(); else toca();
+    pinta();
+  });
+  audio.addEventListener("pause", pinta); audio.addEventListener("play", pinta);
+  audio.addEventListener("canplay", () => { bt.hidden = false; pinta(); }, { once: true });
+  const primeiroToque = () => { toca(); ["pointerdown", "keydown", "touchstart"].forEach((t) => document.removeEventListener(t, primeiroToque, true)); };
+  ["pointerdown", "keydown", "touchstart"].forEach((t) => document.addEventListener(t, primeiroToque, true));
+  document.addEventListener("visibilitychange", () => { if (document.hidden) audio.pause(); else toca(); });
+  const monta = () => { document.head.append(st); document.body.append(bt); audio.src = ARQ; pinta(); };
+  if (document.body) monta(); else document.addEventListener("DOMContentLoaded", monta);
+})();
