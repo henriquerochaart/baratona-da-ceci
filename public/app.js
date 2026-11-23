@@ -64,6 +64,7 @@ function desenhaPercurso() {
     const pos = document.createElement("span"); pos.className = "pos"; pos.textContent = p.n; th.append(pos);
     const h = document.createElement("h3"); h.textContent = b.nome;
     const meta = document.createElement("p"); meta.className = "meta";
+    if (p.hora && !enc) { const hh = document.createElement("b"); hh.className = "hora"; hh.textContent = "~" + p.hora; meta.append(hh, " · "); }
     if (b.end) meta.append(b.end + " · ");
     const a = document.createElement("a"); a.className = "maps"; a.href = mapsUrl(b); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Google Maps"; meta.append(a);
     let lado;
@@ -235,7 +236,7 @@ function abrePopup(b) {
   if (MODO_PERCURSO) {
     const ps = paradas(), k = ps.findIndex((p) => p.bar.id === b.id), prox = ps[k + 1];
     const info = document.createElement("span"); info.className = "pop-enc";
-    info.textContent = (b.id === ENCONTRO_ID ? "📍 Ponto de encontro · 13h · " : "") + `parada ${k + 1} de ${ps.length}`;
+    info.textContent = (b.id === ENCONTRO_ID ? "📍 Ponto de encontro · 13h · " : "") + `parada ${k + 1} de ${ps.length}` + (ps[k] && ps[k].hora && b.id !== ENCONTRO_ID ? ` · ~${ps[k].hora}` : "");
     const seg = document.createElement("span"); seg.textContent = prox ? `Próxima: ${prox.bar.nome}, ${fmtDist(prox.m)} a pé` : "Última parada 🎉";
     const gm = document.createElement("a"); gm.href = mapsUrl(b); gm.target = "_blank"; gm.rel = "noopener"; gm.textContent = "Abrir no Google Maps";
     div.append(info, seg, gm);
@@ -420,7 +421,7 @@ if (MODO_PERCURSO) {
   ["contagem", "busca"].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
   document.querySelector(".filtros").hidden = true;
   document.querySelector(".roteiro-txt").textContent =
-    `A votação acabou e vocês escolheram! 🎉 Com os mais votados, montei o percurso: ${PERCURSO.paradas.length} bares, ${fmtDist(PERCURSO.total_m)} a pé, saindo do Tantin às 13h. Bora? 🍻`;
+    `A votação acabou e vocês escolheram! 🎉 Com os mais votados, montei o percurso: ${PERCURSO.paradas.length} bares, ${fmtDist(PERCURSO.total_m)} a pé, saindo do Tantin às 13h. A ordem segue o horário em que cada bar abre no sábado; as horas são uma estimativa com uns ${PERCURSO.fica_min || 20} minutos em cada um. Bora? 🍻`;
 }
 const login = montaLogin(() => carrega());
 if (/[?&]admin\b/.test(location.search) && !Sessao.telefone) JanelaLogin.abre("entrar como admin");
