@@ -70,7 +70,7 @@ function desenhaPercurso() {
     if (enc) { lado = document.createElement("span"); lado.className = "selo-enc"; lado.innerHTML = "Ponto de<br>encontro<b>13h</b>"; }
     else {
       lado = document.createElement("span"); lado.className = "votos-final";
-      lado.innerHTML = p.votos > 0 ? `<b>${p.votos}</b>${p.votos === 1 ? "voto" : "votos"}` : "no<br>caminho";
+      lado.innerHTML = p.dica ? "dica da<br>Ceci 💋" : p.votos > 0 ? `<b>${p.votos}</b>${p.votos === 1 ? "voto" : "votos"}` : "no<br>caminho";
     }
     li.append(fita, th, h, lado, meta); ul.append(li);
   });
