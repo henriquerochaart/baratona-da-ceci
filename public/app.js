@@ -174,7 +174,8 @@ function iniciaMapa() {
       mapa.addLayer({ id: "percurso-borda", type: "line", source: "percurso", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FCF6EA", "line-width": 8 } });
       mapa.addLayer({ id: "percurso", type: "line", source: "percurso", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#D3213C", "line-width": 4, "line-dasharray": [1.6, 1.2] } });
     } else { BARES.forEach((x) => b.extend([x.lon, x.lat])); b.extend([ENCONTRO.lon, ENCONTRO.lat]); }
-    mapa.fitBounds(b, { padding: 40, duration: 0 });
+    // o nome do bar fica à direita do pino: mais folga desse lado
+    mapa.fitBounds(b, { padding: MODO_PERCURSO ? { top: 40, bottom: 40, left: 40, right: 110 } : 40, duration: 0 });
   });
 }
 function desenhaMapaPercurso() {
