@@ -3,6 +3,18 @@ const $ = (id) => document.getElementById(id);
 let meusVotos = {}, pontos = {}, votantes = 0, sugestoes = [], ocultos = new Set(), souAdmin = false;
 let ordem = "votos", busca = "", ocupado = false, carregou = false;
 let prazo = Date.parse("2026-11-18T23:59:59-03:00"), votacaoAberta = Date.now() <= prazo;
+// Percurso sugerido (percurso.js). Com ele carregado, o Roteiro mostra as 26 paradas em ordem e o caminho a pé;
+// sem ele, o site volta ao modo de votação.
+const MODO_PERCURSO = typeof PERCURSO !== "undefined";
+const fmtDist = (m) => (m >= 1000 ? (m / 1000).toFixed(1).replace(".", ",") + " km" : m + " m");
+function paradas() {
+  const idx = new Map(base().map((b) => [b.id, b]));
+  return PERCURSO.paradas.map((p, i) => {
+    const b = idx.get(p.id) || {};
+    const bar = p.nome ? { ...b, id: p.id, nome: p.nome, end: p.end, lat: p.lat, lon: p.lon, sug: true } : b;
+    return { ...p, n: i + 1, bar };
+  }).filter((p) => p.bar.nome);
+}
 
 /* ---------- dados ---------- */
 async function carrega() {
@@ -38,7 +50,33 @@ const foiApagado = (k) => base().some((b) => ocultos.has(b.id) && norm(b.nome) =
 const ranking = () => todos().filter((b) => b.id !== ENCONTRO_ID).sort((a, b) => (pontos[b.id] || 0) - (pontos[a.id] || 0) || a.nome.localeCompare(b.nome, "pt"));
 const SETA = (up) => `<svg viewBox="0 0 22 18" aria-hidden="true"><path d="${up ? "M11 2L20 15H2Z" : "M11 16L20 3H2Z"}" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
 
+function desenhaPercurso() {
+  const ul = $("lista"); ul.textContent = ""; ul.classList.add("percurso");
+  paradas().forEach((p, i) => {
+    const b = p.bar, enc = b.id === ENCONTRO_ID;
+    if (i) { const perna = document.createElement("li"); perna.className = "perna"; perna.textContent = `↓ ${fmtDist(p.m)} · ${p.min} min a pé`; ul.append(perna); }
+    const li = document.createElement("li"); li.className = "bar parada" + (enc ? " encontro" : ""); li.id = "bar-" + b.id;
+    const fita = document.createElement("span"); fita.className = "fita"; fita.setAttribute("aria-hidden", "true");
+    const th = document.createElement("button"); th.type = "button"; th.className = "thumb"; th.title = "Ver no mapa";
+    th.setAttribute("aria-label", `Parada ${p.n}: ver ${b.nome} no mapa`);
+    if (b.foto) th.style.backgroundImage = `url("${b.foto}")`; else th.textContent = inicial(b.nome);
+    th.onclick = () => voaPara(b, true);
+    const pos = document.createElement("span"); pos.className = "pos"; pos.textContent = p.n; th.append(pos);
+    const h = document.createElement("h3"); h.textContent = b.nome;
+    const meta = document.createElement("p"); meta.className = "meta";
+    if (b.end) meta.append(b.end + " · ");
+    const a = document.createElement("a"); a.className = "maps"; a.href = mapsUrl(b); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Google Maps"; meta.append(a);
+    let lado;
+    if (enc) { lado = document.createElement("span"); lado.className = "selo-enc"; lado.innerHTML = "Ponto de<br>encontro<b>13h</b>"; }
+    else {
+      lado = document.createElement("span"); lado.className = "votos-final";
+      lado.innerHTML = p.votos > 0 ? `<b>${p.votos}</b>${p.votos === 1 ? "voto" : "votos"}` : "no<br>caminho";
+    }
+    li.append(fita, th, h, lado, meta); ul.append(li);
+  });
+}
 function desenhaLista() {
+  if (MODO_PERCURSO) return desenhaPercurso();
   const ul = $("lista"); ul.textContent = "";
   const rank = ranking(), pos = {}; rank.forEach((b, i) => (pos[b.id] = i + 1));
   let itens = ordem === "az" ? [...rank].sort((a, b) => a.nome.localeCompare(b.nome, "pt")) : rank;
@@ -93,6 +131,10 @@ function desenhaLista() {
   });
 }
 function atualizaStatus() {
+  if (MODO_PERCURSO) {
+    $("status").innerHTML = `<span><b>${votantes || PERCURSO.votantes}</b> pessoas votaram</span><span><b>${PERCURSO.paradas.length}</b> bares · <b>${fmtDist(PERCURSO.total_m)}</b> a pé</span>`;
+    return;
+  }
   $("status").innerHTML = `<span><b>${votantes}</b> ${votantes === 1 ? "pessoa votou" : "pessoas votaram"}</span><span><b>${todos().length}</b> bares na lista</span>`;
 }
 let avisoTimer = null;
@@ -126,12 +168,38 @@ function iniciaMapa() {
   mapa.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "bottom-right");
   mapa.on("load", () => {
     const b = new maplibregl.LngLatBounds();
-    BARES.forEach((x) => b.extend([x.lon, x.lat])); b.extend([ENCONTRO.lon, ENCONTRO.lat]);
+    if (MODO_PERCURSO) {
+      PERCURSO.linha.forEach((c) => b.extend(c));
+      mapa.addSource("percurso", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: PERCURSO.linha } } });
+      mapa.addLayer({ id: "percurso-borda", type: "line", source: "percurso", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FCF6EA", "line-width": 8 } });
+      mapa.addLayer({ id: "percurso", type: "line", source: "percurso", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#D3213C", "line-width": 4, "line-dasharray": [1.6, 1.2] } });
+    } else { BARES.forEach((x) => b.extend([x.lon, x.lat])); b.extend([ENCONTRO.lon, ENCONTRO.lat]); }
     mapa.fitBounds(b, { padding: 40, duration: 0 });
   });
 }
+function desenhaMapaPercurso() {
+  const vistos = new Set();
+  paradas().forEach((p) => {
+    const b = p.bar; if (typeof b.lat !== "number" || typeof b.lon !== "number") return;
+    vistos.add(b.id);
+    let m = marcadores.get(b.id);
+    if (!m) {
+      const el = document.createElement("button"); el.type = "button"; el.className = "pino parada";
+      el.innerHTML = `<span class="foto-pino"${b.foto ? ` style="background-image:url('${b.foto}')"` : ""}>${b.foto ? "" : esc(inicial(b.nome))}<span class="num-pino">${p.n}</span></span><span class="nome-pino"><b>${esc(b.nome)}</b><i></i></span>`;
+      el.addEventListener("click", (e) => { e.stopPropagation(); abrePopup(b); });
+      m = new maplibregl.Marker({ element: el, anchor: "left", offset: [-22, 0] }).setLngLat([b.lon, b.lat]).addTo(mapa);
+      marcadores.set(b.id, m);
+    }
+    const el = m.getElement(), enc = b.id === ENCONTRO_ID;
+    el.classList.toggle("encontro", enc);
+    el.querySelector("i").textContent = enc ? "📍 Encontro · 13h" : `parada ${p.n}`;
+    el.setAttribute("aria-label", enc ? `${b.nome}, parada 1, ponto de encontro às 13h` : `${b.nome}, parada ${p.n}`);
+  });
+  for (const [id, m] of marcadores) if (!vistos.has(id)) { m.remove(); marcadores.delete(id); }
+}
 function desenhaMapa() {
   if (!mapa) return;
+  if (MODO_PERCURSO) return desenhaMapaPercurso();
   const vistos = new Set();
   todos().forEach((b) => {
     if (typeof b.lat !== "number" || typeof b.lon !== "number") return;
@@ -163,6 +231,16 @@ function abrePopup(b) {
   const div = document.createElement("div"); div.className = "pop";
   div.innerHTML = (b.foto ? `<span class="pop-foto" style="background-image:url('${b.foto}')"></span>` : "") +
     `<b>${esc(b.nome)}</b><span>${esc(b.end || "")}</span>`;
+  if (MODO_PERCURSO) {
+    const ps = paradas(), k = ps.findIndex((p) => p.bar.id === b.id), prox = ps[k + 1];
+    const info = document.createElement("span"); info.className = "pop-enc";
+    info.textContent = (b.id === ENCONTRO_ID ? "📍 Ponto de encontro · 13h · " : "") + `parada ${k + 1} de ${ps.length}`;
+    const seg = document.createElement("span"); seg.textContent = prox ? `Próxima: ${prox.bar.nome}, ${fmtDist(prox.m)} a pé` : "Última parada 🎉";
+    const gm = document.createElement("a"); gm.href = mapsUrl(b); gm.target = "_blank"; gm.rel = "noopener"; gm.textContent = "Abrir no Google Maps";
+    div.append(info, seg, gm);
+    popup = new maplibregl.Popup({ offset: 26, maxWidth: "240px" }).setLngLat([b.lon, b.lat]).setDOMContent(div).addTo(mapa);
+    return;
+  }
   if (b.id === ENCONTRO_ID) {
     const enc = document.createElement("span"); enc.className = "pop-enc"; enc.textContent = "📍 Ponto de encontro · 13h";
     const gm = document.createElement("a"); gm.href = mapsUrl(b); gm.target = "_blank"; gm.rel = "noopener"; gm.textContent = "Abrir no Google Maps";
@@ -314,8 +392,8 @@ async function administra(acao, b) {
 }
 function desenhaAdmin() {
   const box = $("admin");
-  box.hidden = !souAdmin;
-  if (!souAdmin) return;
+  box.hidden = !souAdmin || MODO_PERCURSO;
+  if (box.hidden) return;
   const ul = $("apagados"); ul.textContent = "";
   const lista = base().filter((b) => ocultos.has(b.id)).sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
   $("admin-resumo").textContent = lista.length
@@ -336,6 +414,13 @@ const fv = $("f-votos"), fa = $("f-az");
 fv.onclick = () => { ordem = "votos"; fv.setAttribute("aria-pressed", "true"); fa.setAttribute("aria-pressed", "false"); desenhaLista(); };
 fa.onclick = () => { ordem = "az"; fa.setAttribute("aria-pressed", "true"); fv.setAttribute("aria-pressed", "false"); desenhaLista(); };
 
+if (MODO_PERCURSO) {
+  document.body.classList.add("modo-percurso");
+  ["contagem", "busca"].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  document.querySelector(".filtros").hidden = true;
+  document.querySelector(".roteiro-txt").textContent =
+    `A votação acabou e vocês escolheram! 🎉 Com os mais votados, montei o percurso: ${PERCURSO.paradas.length} bares, ${fmtDist(PERCURSO.total_m)} a pé, saindo do Tantin às 13h. Bora? 🍻`;
+}
 const login = montaLogin(() => carrega());
 if (/[?&]admin\b/.test(location.search) && !Sessao.telefone) JanelaLogin.abre("entrar como admin");
 iniciaMapa(); tudo(); carrega(); relogio();
