@@ -169,7 +169,7 @@
     const bt = $("bt-zera");
     if (bt.dataset.certeza !== "1") { bt.dataset.certeza = "1"; bt.textContent = "Apagar atividade? Toque de novo"; setTimeout(() => { bt.dataset.certeza = ""; bt.textContent = "Recomeçar"; }, 4000); return; }
     bt.dataset.certeza = ""; bt.textContent = "Recomeçar";
-    S = novo(); salva(); aviso("Aperte Iniciar quando estiver no Tantin."); desenha();
+    S = novo(); salva(); aviso("Aperte Iniciar onde você estiver."); desenha();
   });
   $("bt-kudos").addEventListener("click", () => { const a = demo || S; a.kudos = (a.kudos || 0) + 1; if (!demo) salva(); desenha(); });
 
@@ -206,7 +206,7 @@
     if (!demo) return; clearInterval(demo.tick); demo = null; $("demo-selo").hidden = true;
     if (eu) { eu.remove(); eu = null; }
     const ult = S.trilha[S.trilha.length - 1]; if (ult) posicaoEu(ult);
-    aviso(S.status === "parado" ? "Aperte Iniciar quando estiver no Tantin." : "");
+    aviso(S.status === "parado" ? "Aperte Iniciar onde você estiver." : "");
   }
 
   /* ---------- tela ---------- */
