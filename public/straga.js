@@ -140,7 +140,7 @@
     } catch { return; }
     mapa.on("load", () => {
       mapa.addSource("plano", { type: "geojson", data: linhaGeo(PLANO) });
-      mapa.addLayer({ id: "plano", type: "line", source: "plano", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FFFFFF", "line-width": 3, "line-opacity": 0.6, "line-dasharray": [1.2, 1.6] } });
+      mapa.addLayer({ id: "plano", type: "line", source: "plano", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FFFFFF", "line-width": 4, "line-opacity": 0.85, "line-dasharray": [1.2, 1.6] } });
       mapa.addSource("trilha", { type: "geojson", data: linhaGeo([]) });
       mapa.addLayer({ id: "trilha-borda", type: "line", source: "trilha", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#2A0E00", "line-width": 10, "line-opacity": 0.5 } });
       mapa.addLayer({ id: "trilha", type: "line", source: "trilha", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": LARANJA, "line-width": 6 } });
@@ -326,7 +326,7 @@
       let aqui = demo.trilha[demo.trilha.length - 1];
       if (k > 0 && k < linha.length) { const a = linha[k - 1], b = linha[k], t = (alvo - acum[k - 1]) / (acum[k] - acum[k - 1] || 1); aqui = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
       demo.metros = alvo; demo.relogio = fr * JORNADA;
-      if (aqui) { posicaoEu(aqui); camera(aqui, demo.ant, true); demo.ant = aqui; }
+      if (aqui) { posicaoEu(aqui); camera(aqui, demo.ant, true); demo.ant = aqui; demo.aqui = aqui; }
       ordem.forEach(({ b, m }) => {
         if (m <= alvo && !demo.checks.some((c) => c.id === b.id)) {
           marca(b, FOTOS[f++ % FOTOS.length]);
@@ -395,7 +395,7 @@
     if (!$("perto").hidden) preencheBares();
 
     if (pronto) {
-      mapa.getSource("trilha").setData(linhaGeo(a.trilha));
+      mapa.getSource("trilha").setData(linhaGeo(demo && demo.aqui && !demo.fim ? a.trilha.concat([demo.aqui]) : a.trilha));
       const feitos = new Map(a.checks.map((c) => [c.id, c]));
       pinos.forEach((el, id) => {
         const c = feitos.get(id);

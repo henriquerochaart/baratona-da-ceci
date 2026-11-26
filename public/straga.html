@@ -83,9 +83,9 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .numeros{position:absolute;inset:0;z-index:3;background:#fff;display:flex;flex-direction:column;padding:14px 16px 104px;text-align:center}
 .tela[data-vista="mapa"] .numeros{display:none}
 .tela[data-vista="numeros"] .hud,.tela[data-vista="numeros"] .bt-centro,.tela[data-vista="numeros"] .demo-selo{display:none}
-.n-topo{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:6px}
+.n-topo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:6px}
 .n-canto{text-align:left;font:500 13px/1.25 var(--f-app);color:var(--grafite)} .n-canto.dir{text-align:right}
-.n-canto b{display:block;font:500 17px/1.2 var(--f-app);font-variant-numeric:tabular-nums}
+.n-canto b{display:block;font:500 17px/1.2 var(--f-app);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .n-rotulo{font:500 17px var(--f-app);letter-spacing:.04em;color:#4A4A55;text-transform:uppercase;margin:0}
 .n-tempo{font:400 clamp(52px,10vh,78px)/1 var(--f-app);font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin:10px 0 0}
 .numeros hr{border:0;border-top:1px solid var(--linha);margin:auto 0 auto;width:100%}
@@ -163,6 +163,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .grade img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}
 .kudos{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .kudos strong{font:600 14px var(--f-app)}
+/* botão de música do site: no Straga vai para o canto de baixo, longe dos números */
+html body .som{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));right:auto;left:max(14px,env(safe-area-inset-left,0px));width:42px;height:42px;font-size:19px}
 #arquivo{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 
 .previa{position:fixed;inset:0;z-index:10000;background:rgba(20,20,24,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
