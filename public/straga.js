@@ -115,6 +115,27 @@
   $("bt-mais").addEventListener("click", () => drink(1));
   $("bt-menos").addEventListener("click", () => drink(-1));
 
+  /* ---------- tela cheia (o Straga vira app) ---------- */
+  let cheiaHist = false;
+  function telaCheia(on, doHistorico) {
+    const app = document.querySelector(".app");
+    if (app.classList.contains("cheia") === on) return;
+    app.classList.toggle("cheia", on);
+    document.documentElement.classList.toggle("sem-rolagem", on);
+    if (on) {
+      app.scrollTop = 0;
+      // o "voltar" do celular fecha a tela cheia em vez de sair do site
+      if (!doHistorico) { try { history.pushState({ straga: 1 }, ""); cheiaHist = true; } catch {} }
+    } else if (cheiaHist && !doHistorico) { cheiaHist = false; try { history.back(); } catch {} }
+    else cheiaHist = false;
+    if (!on) document.querySelector(".tela").scrollIntoView({ block: "center" });
+    if (mapa) setTimeout(() => mapa.resize(), 60);
+  }
+  window.addEventListener("popstate", () => { if (document.querySelector(".app").classList.contains("cheia")) telaCheia(false, true); });
+  $("bt-voltar").addEventListener("click", () => telaCheia(false));
+  $("bt-cheia").addEventListener("click", () => telaCheia(true));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !document.querySelector(".previa")) telaCheia(false); });
+
   /* ---------- vistas: números x mapa ---------- */
   const ICO_MAPA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.2A7 7 0 0 1 19 9.8C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.8" r="2.6"/></svg>';
   const ICO_NUM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h9"/></svg>';
@@ -317,6 +338,7 @@
       else { S.status = "rodando"; S.desde = Date.now(); aviso("De volta à Baratona."); }
       segue = true; $("bt-centro").hidden = true;
       if (S.status === "rodando" && !S.acum) vista("numeros");
+      telaCheia(true);
       ligaGps(); acordado(true); roda();
     } else if (S.status === "rodando") {
       S.acum += Date.now() - S.desde; S.status = "pausado"; desligaGps(); acordado(false); aviso("Pausado. O tempo parou.");
@@ -328,7 +350,7 @@
     if (S.status === "rodando") S.acum += Date.now() - S.desde;
     S.status = "fim"; desligaGps(); acordado(false); clearInterval(tique); segue = false; $("bt-centro").hidden = true; vista("mapa");
     visaoGeral(S.trilha.length > 1 ? S.trilha : PLANO); salva(); desenha();
-    $("resumo").scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => $("resumo").scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   });
   $("bt-zera").addEventListener("click", () => {
     if (demo) { paraDemo(); desenha(); return; }
@@ -343,8 +365,8 @@
   const FOTOS = ["/arte/foto-beijo.webp", "/arte/foto-boia.webp", "/arte/foto-gatinho.webp", "/arte/ceci-boia.webp", "/arte/spritz.webp", "/arte/cerejas.webp", "/arte/onca.webp", "/arte/tarot.webp"];
   $("bt-demo").addEventListener("click", () => {
     if (S.status === "rodando") { aviso("Você está com uma atividade rodando. Pause ou finalize antes da demonstração.", true); return; }
+    telaCheia(true);
     comecaDemo();
-    document.querySelector(".tela").scrollIntoView({ behavior: "smooth", block: "center" });
   });
   function comecaDemo() {
     paraDemo();
@@ -651,6 +673,7 @@
   /* ---------- início ---------- */
   iniciaMapa();
   vista(S.status === "rodando" || S.status === "pausado" ? "numeros" : "mapa");
+  if (S.status === "rodando" || S.status === "pausado") telaCheia(true); // voltou no meio da Baratona: direto no app
   desenhaConquistas();
   if (S.status === "rodando") { segue = true; ligaGps(); acordado(true); roda(); aviso("Atividade em andamento. O cronômetro não parou."); }
   else if (S.status === "pausado") aviso("Atividade pausada. Aperte Voltar para continuar.");

@@ -116,6 +116,23 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .bt-fim{border:0;border-radius:999px;background:var(--grafite);color:#fff;font:700 15px var(--f-app);padding:14px 18px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.25)}
 .bt:focus-visible,.play:focus-visible,.bt-centro:focus-visible,.redondo:focus-visible,.n-bt:focus-visible,.bt-fim:focus-visible{outline:3px solid var(--sol);outline-offset:3px}
 
+/* tela cheia: o app ocupa o celular inteiro, com seta para voltar ao site */
+html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
+.app.cheia{position:fixed;inset:0;z-index:9500;border:0;border-radius:0;box-shadow:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.app.cheia .tela{height:100vh;height:100dvh;min-height:0}
+.bt-voltar{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:7;width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.94);color:var(--grafite);display:none;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer}
+.bt-voltar svg{width:22px;height:22px}
+.app.cheia .bt-voltar{display:grid}
+.bt-cheia{position:absolute;right:10px;top:10px;z-index:5;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(255,255,255,.94);color:var(--grafite);font:700 19px/1 var(--f-app);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.tela[data-vista="numeros"] .bt-cheia{top:auto;right:auto;left:10px;bottom:30px}
+.app.cheia .bt-cheia{display:none}
+.app.cheia .hud{padding-top:calc(18px + env(safe-area-inset-top,0px))}
+.app.cheia .numeros{padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.app.cheia .n-topo{padding-left:48px}
+.app.cheia .barra-ctl{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.app.cheia .toast{top:calc(60px + env(safe-area-inset-top,0px))}
+.app.cheia .folha,.app.cheia .resumo{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+
 /* conquista desbloqueada */
 .toast{position:absolute;left:12px;right:12px;top:12px;z-index:6;display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 10px 28px rgba(0,0,0,.35);animation:entra .35s ease-out}
 .toast img{width:56px;height:56px;border-radius:12px;flex:none}
@@ -258,6 +275,8 @@ html body .som{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));righ
           <button class="bt-fim" id="bt-fim" type="button" hidden>Finalizar</button>
           <button class="redondo" id="bt-vista" type="button" aria-label="Ver o mapa"></button>
         </div>
+        <button class="bt-voltar" id="bt-voltar" type="button" aria-label="Voltar ao site"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="bt-cheia" id="bt-cheia" type="button" aria-label="Abrir o Straga em tela cheia" title="Tela cheia">⤢</button>
         <div class="toast" id="toast" role="status" hidden><img id="toast-img" src="" alt=""><div><span>Conquista desbloqueada</span><b id="toast-nome"></b><small id="toast-desc"></small></div></div>
       </div>
       <p class="credito">Imagens de satélite: Esri, Maxar, Earthstar Geographics</p>
