@@ -353,7 +353,7 @@
     salva(); desenha(); turmaAgenda();
   });
   $("bt-fim").addEventListener("click", () => {
-    if (demo) { demo.fim = true; clearInterval(demo.tick); segue = false; visaoGeral(demo.trilha); desenha(); return; }
+    if (demo) { paraDemo(); telaCheia(false); desenha(); return; } // Finalizar na demonstração: sai da demo e volta ao site
     if (S.status === "rodando") S.acum += Date.now() - S.desde;
     S.status = "fim"; desligaGps(); acordado(false); clearInterval(tique); segue = false; $("bt-centro").hidden = true; vista("mapa");
     visaoGeral(S.trilha.length > 1 ? S.trilha : PLANO); salva(); desenha(); turmaAgenda();
