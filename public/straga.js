@@ -7,6 +7,10 @@
   const RAIO = 80; // metros para sugerir um bar como "aqui"
   const PERTO = 400;
   const LARANJA = "#FC4C02";
+  // Até sábado o Iniciar só mostra a demonstração; a partir de 28/11 0h (Brasília) ele grava de verdade.
+  const GRAVA_EM = Date.parse("2026-11-28T00:00:00-03:00");
+  const soDemo = () => Date.now() < GRAVA_EM;
+  const AVISO_INICIO = () => (soDemo() ? "Até sábado, o Iniciar mostra a demonstração. No dia 28/11 ele grava de verdade." : "Aperte Iniciar onde você estiver.");
   const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const CREDITO = "Imagens © Esri, Maxar, Earthstar Geographics";
   const ESTILO = {
@@ -332,6 +336,7 @@
   let tique = null;
   function roda() { clearInterval(tique); let n = 0; tique = setInterval(() => { desenhaStats(); if (++n % 30 === 0) checaConquistas(); }, 1000); }
   $("bt-play").addEventListener("click", () => {
+    if (soDemo() && S.status === "parado") { telaCheia(true); comecaDemo(); return; }
     if (demo) paraDemo();
     if (S.status === "parado" || S.status === "pausado") {
       if (S.status === "parado") { S = { ...novo(), status: "rodando", desde: Date.now(), inicioEm: Date.now() }; aviso("Valendo! O trajeto aparece em laranja no mapa."); }
@@ -357,7 +362,7 @@
     const bt = $("bt-zera");
     if (bt.dataset.certeza !== "1") { bt.dataset.certeza = "1"; bt.textContent = "Apagar atividade? Toque de novo"; setTimeout(() => { bt.dataset.certeza = ""; bt.textContent = "Recomeçar"; }, 4000); return; }
     bt.dataset.certeza = ""; bt.textContent = "Recomeçar";
-    S = novo(); salva(); if (eu) { eu.remove(); eu = null; } visaoGeral(PLANO); vista("mapa"); aviso("Aperte Iniciar onde você estiver."); desenha(); desenhaConquistas();
+    S = novo(); salva(); if (eu) { eu.remove(); eu = null; } visaoGeral(PLANO); vista("mapa"); aviso(AVISO_INICIO()); desenha(); desenhaConquistas();
   });
   $("bt-kudos").addEventListener("click", () => { const a = demo || S; a.kudos = (a.kudos || 0) + 1; if (!demo) salva(); desenha(); });
 
@@ -398,7 +403,7 @@
       if (fr >= 1) { demo.fim = true; clearInterval(demo.tick); segue = false; visaoGeral(demo.trilha, 1600); aviso("Fim da demonstração. Lá embaixo está a atividade que sai no final."); }
       desenha();
     }, 120);
-    aviso("Demonstração: 10 horas de Baratona em 45 segundos.");
+    aviso(soDemo() ? "Demonstração: 10 horas de Baratona em 45 segundos. No sábado, o Iniciar grava de verdade." : "Demonstração: 10 horas de Baratona em 45 segundos.");
     desenha();
   }
   function paraDemo() {
@@ -407,7 +412,7 @@
     if (eu) { eu.remove(); eu = null; }
     const ult = S.trilha[S.trilha.length - 1]; if (ult) posicaoEu(ult);
     visaoGeral(S.trilha.length > 1 ? S.trilha : PLANO);
-    aviso(S.status === "parado" ? "Aperte Iniciar onde você estiver." : "");
+    aviso(S.status === "parado" ? AVISO_INICIO() : "");
   }
 
   /* ---------- tela ---------- */
@@ -447,7 +452,7 @@
     else { play.textContent = "Iniciar"; play.removeAttribute("aria-label"); }
     $("bt-foto").hidden = !!demo || !(st === "rodando" || st === "pausado");
     $("bt-fim").hidden = demo ? demo.fim : st !== "pausado";
-    $("bt-demo").hidden = !!demo || S.status === "rodando";
+    $("bt-demo").hidden = !!demo || S.status === "rodando" || soDemo();
     $("perto").hidden = !(st === "rodando" || st === "pausado") || !!demo;
     if (!$("perto").hidden) preencheBares();
 
@@ -677,5 +682,6 @@
   desenhaConquistas();
   if (S.status === "rodando") { segue = true; ligaGps(); acordado(true); roda(); aviso("Atividade em andamento. O cronômetro não parou."); }
   else if (S.status === "pausado") aviso("Atividade pausada. Aperte Voltar para continuar.");
+  else if (S.status === "parado") aviso(AVISO_INICIO());
   desenha();
 })();
