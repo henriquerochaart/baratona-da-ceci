@@ -7,10 +7,7 @@
   const RAIO = 80; // metros para sugerir um bar como "aqui"
   const PERTO = 400;
   const LARANJA = "#FC4C02";
-  // Até sábado o Iniciar só mostra a demonstração; a partir de 28/11 0h (Brasília) ele grava de verdade.
-  const GRAVA_EM = Date.parse("2026-11-28T00:00:00-03:00");
-  const soDemo = () => Date.now() < GRAVA_EM;
-  const AVISO_INICIO = () => (soDemo() ? "Até sábado, o Iniciar mostra a demonstração. No dia 28/11 ele grava de verdade." : "Aperte Iniciar onde você estiver.");
+  const AVISO_INICIO = () => "Aperte Iniciar onde você estiver.";
   const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const CREDITO = "Imagens © Esri, Maxar, Earthstar Geographics";
   const ESTILO = {
@@ -338,7 +335,6 @@
   let tique = null;
   function roda() { clearInterval(tique); let n = 0; tique = setInterval(() => { desenhaStats(); if (++n % 30 === 0) checaConquistas(); }, 1000); }
   $("bt-play").addEventListener("click", () => {
-    if (soDemo() && S.status === "parado") { telaCheia(true); comecaDemo(); return; }
     if (demo) paraDemo();
     if (S.status === "parado" || S.status === "pausado") {
       if (S.status === "parado") { S = { ...novo(), status: "rodando", desde: Date.now(), inicioEm: Date.now() }; aviso("Valendo! O trajeto aparece em laranja no mapa."); }
@@ -405,7 +401,7 @@
       if (fr >= 1) { demo.fim = true; clearInterval(demo.tick); segue = false; visaoGeral(demo.trilha, 1600); aviso("Fim da demonstração. Lá embaixo está a atividade que sai no final."); }
       desenha();
     }, 120);
-    aviso(soDemo() ? "Demonstração: 10 horas de Baratona em 45 segundos. No sábado, o Iniciar grava de verdade." : "Demonstração: 10 horas de Baratona em 45 segundos.");
+    aviso("Demonstração: 10 horas de Baratona em 45 segundos.");
     desenha();
   }
   function paraDemo() {
@@ -454,7 +450,7 @@
     else { play.textContent = "Iniciar"; play.removeAttribute("aria-label"); }
     $("bt-foto").hidden = !!demo || !(st === "rodando" || st === "pausado");
     $("bt-fim").hidden = demo ? demo.fim : st !== "pausado";
-    $("bt-demo").hidden = !!demo || S.status === "rodando" || soDemo();
+    $("bt-demo").hidden = !!demo || S.status === "rodando";
     $("perto").hidden = !(st === "rodando" || st === "pausado") || !!demo;
     if (!$("perto").hidden) preencheBares();
 
