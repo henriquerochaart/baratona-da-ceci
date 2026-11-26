@@ -46,7 +46,6 @@
   };
   const kmN = (m) => (m / 1000).toFixed(2).replace(".", ",");
   const km = (m) => kmN(m) + " km";
-  const pace = (ms, n) => (n ? Math.round(ms / n / 60000) + "′/bar" : "–");
   const hhmm = (ms) => { const m = Math.floor(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m} min`; };
 
   /* ---------- estado ---------- */
@@ -360,10 +359,12 @@
     const [v, u] = tempoCurto(t);
     $("s-tempo").textContent = v; $("s-tempo-u").textContent = u;
     $("s-drinks").textContent = dr; $("s-drinks-u").textContent = `em ${n} ${n === 1 ? "bar" : "bares"}`;
-    $("s-dist").textContent = kmN(m); $("s-bares").textContent = `${n}/${TOTAL}`; $("s-pace").textContent = pace(t, n);
+    $("s-dist").textContent = kmN(m); $("s-bares").textContent = `${n}/${TOTAL}`;
     $("n-tempo").textContent = relogio(t); $("n-drinks").textContent = dr; $("n-km").textContent = kmN(m);
     $("n-media").textContent = t >= 10 * 60000 ? (dr / (t / 3600000)).toFixed(1).replace(".", ",") : "–";
-    $("n-bares").textContent = `${n} de ${TOTAL}`; $("n-pace").textContent = pace(t, n);
+    $("n-bares").textContent = `${n} de ${TOTAL}`;
+    const ult = a.drinks[a.drinks.length - 1];
+    $("n-ultimo").textContent = ult == null ? "–" : (t - ult < 60000 ? "agora" : `há ${hhmm(t - ult)}`);
     const p = proximoBar();
     $("n-prox-l").textContent = p ? "Próximo bar" : "Fim da lista";
     $("n-prox").textContent = p ? `${p.b.nome.length > 16 ? p.b.nome.slice(0, 15) + "…" : p.b.nome}${p.d != null ? ` · ${p.d < 1000 ? Math.round(p.d) + " m" : (p.d / 1000).toFixed(1).replace(".", ",") + " km"}` : ""}` : "🎉";
@@ -412,7 +413,7 @@
     if (fim) {
       const t = tempo(), n = a.checks.length;
       $("r-titulo").textContent = demo ? "Baratona da Ceci (demo)" : "Baratona da Ceci";
-      $("r-sub").textContent = (demo ? "28/11 · Pinheiros e Vila Madalena" : `${new Date(S.inicioEm || Date.now()).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · ${hhmm(t)} de Baratona`) + ` · Pace fofoca ${pace(t, n)}`;
+      $("r-sub").textContent = (demo ? "28/11 · Pinheiros e Vila Madalena" : `${new Date(S.inicioEm || Date.now()).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · ${hhmm(t)} de Baratona`);
       $("r-tempo").textContent = relogio(t); $("r-dist").textContent = km(demo ? demo.metros : S.metros);
       $("r-bares").textContent = `${n}/${TOTAL}`; $("r-drinks").textContent = a.drinks.length;
       const rc = $("r-conq"); rc.textContent = "";
@@ -531,7 +532,7 @@
     });
     // rodapé
     g.textAlign = "left"; g.font = '700 36px "Barlow", system-ui, sans-serif';
-    g.fillText(`${n} de ${TOTAL} bares · Pace fofoca ${pace(t, n)}`, 60, H - 120);
+    g.fillText(`${n} de ${TOTAL} bares`, 60, H - 120);
     g.font = '500 30px "Barlow", system-ui, sans-serif';
     g.fillText("28/11 · Baratona da Ceci · Pinheiros e Vila Madalena", 60, H - 72);
     g.restore();
@@ -582,7 +583,7 @@
     const feitos = new Set(a.checks.map((ck) => ck.id));
     BARS.forEach((b) => { const [x, y] = P([b.lon, b.lat]); g.beginPath(); g.arc(x, y, feitos.has(b.id) ? 12 : 8, 0, Math.PI * 2); g.fillStyle = feitos.has(b.id) ? LARANJA : "#C9B9A3"; g.fill(); g.lineWidth = 3; g.strokeStyle = "#fff"; g.stroke(); });
     g.textAlign = "center"; g.font = '700 32px "Barlow", sans-serif'; g.fillStyle = "#242428";
-    g.fillText(`Pace fofoca ${pace(t, n)} · 28/11 · Baratona da Ceci`, W / 2, H - 80);
+    g.fillText(`${n} de ${TOTAL} bares · 28/11 · Baratona da Ceci`, W / 2, H - 80);
     return new Promise((ok) => c.toBlob(ok, "image/png"));
   }
 
