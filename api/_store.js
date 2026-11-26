@@ -48,3 +48,28 @@ export function corpo(req) {
   if (req.body && typeof req.body === "object") return req.body;
   try { return JSON.parse(req.body || "{}"); } catch { return {}; }
 }
+
+/* ---------- Straga: a turma (nome, posição ao vivo e ranking) ----------
+   Fica na mesma tabela, coleção "straga", fora do estado() dos votos.
+   Linhas com mais de 3 dias são apagadas a cada gravação. */
+export async function gravaStraga(id, dados) {
+  if (!validVoter(id)) throw new Error("Gravação inválida.");
+  await banco();
+  await sql.query(
+    `insert into baratona_dados (colecao, voter, dados, at) values ('straga', $1, $2::jsonb, now())
+     on conflict (colecao, voter) do update set dados = excluded.dados, at = now()`,
+    [id, JSON.stringify(dados)],
+  );
+  sql.query("delete from baratona_dados where colecao = 'straga' and at < now() - interval '3 days'").catch(() => {});
+}
+export async function apagaStraga(id) {
+  if (!validVoter(id)) return;
+  await banco();
+  await sql.query("delete from baratona_dados where colecao = 'straga' and voter = $1", [id]);
+}
+export async function listaStraga() {
+  await banco();
+  return sql.query(
+    "select voter, dados, extract(epoch from (now() - at))::int as idade from baratona_dados where colecao = 'straga' and at > now() - interval '2 days'",
+  );
+}

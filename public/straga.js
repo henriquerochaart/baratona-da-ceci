@@ -114,7 +114,7 @@
     else if (a.drinks.length) { a.drinks.pop(); a.menos = (a.menos || 0) + 1; }
     else return;
     if (!demo) salva();
-    desenhaStats(); checaConquistas();
+    desenhaStats(); checaConquistas(); turmaAgenda();
   }
   $("bt-mais").addEventListener("click", () => drink(1));
   $("bt-menos").addEventListener("click", () => drink(-1));
@@ -172,6 +172,7 @@
         new maplibregl.Marker({ element: el }).setLngLat([x.lon, x.lat]).addTo(mapa);
       });
       pronto = true;
+      desenhaTurma();
       const ult = ondeEstou();
       if (ult && (S.status === "rodando" || S.status === "pausado")) { posicaoEu(ult); segue = S.status === "rodando"; camera(ult, null, false); }
       else visaoGeral(S.status === "fim" && S.trilha.length > 1 ? S.trilha : PLANO, 0);
@@ -268,6 +269,7 @@
     if (!("geolocation" in navigator)) return;
     desligaGps(); ligaGps();
     navigator.geolocation.getCurrentPosition(ponto, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+    setTimeout(() => sincroniza(true), 4000);
   }
   async function acordado(on) {
     try { if (on && "wakeLock" in navigator && !trava) { trava = await navigator.wakeLock.request("screen"); trava.addEventListener("release", () => (trava = null)); } } catch {}
@@ -329,7 +331,7 @@
     alvo.push({ id: b.id, n: b.n, nome: b.nome, t: tempo(), selfie });
     if (!demo) salva();
     aviso(`Checkpoint no ${b.nome}! ${alvo.length} de ${TOTAL} 🍻`);
-    desenha(); checaConquistas();
+    desenha(); checaConquistas(); turmaAgenda();
   }
 
   /* ---------- controles ---------- */
@@ -348,13 +350,13 @@
     } else if (S.status === "rodando") {
       S.acum += Date.now() - S.desde; S.status = "pausado"; desligaGps(); acordado(false); aviso("Pausado. O tempo parou.");
     }
-    salva(); desenha();
+    salva(); desenha(); turmaAgenda();
   });
   $("bt-fim").addEventListener("click", () => {
     if (demo) { demo.fim = true; clearInterval(demo.tick); segue = false; visaoGeral(demo.trilha); desenha(); return; }
     if (S.status === "rodando") S.acum += Date.now() - S.desde;
     S.status = "fim"; desligaGps(); acordado(false); clearInterval(tique); segue = false; $("bt-centro").hidden = true; vista("mapa");
-    visaoGeral(S.trilha.length > 1 ? S.trilha : PLANO); salva(); desenha();
+    visaoGeral(S.trilha.length > 1 ? S.trilha : PLANO); salva(); desenha(); turmaAgenda();
     setTimeout(() => $("resumo").scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   });
   $("bt-zera").addEventListener("click", () => {
@@ -362,7 +364,7 @@
     const bt = $("bt-zera");
     if (bt.dataset.certeza !== "1") { bt.dataset.certeza = "1"; bt.textContent = "Apagar atividade? Toque de novo"; setTimeout(() => { bt.dataset.certeza = ""; bt.textContent = "Recomeçar"; }, 4000); return; }
     bt.dataset.certeza = ""; bt.textContent = "Recomeçar";
-    S = novo(); salva(); if (eu) { eu.remove(); eu = null; } visaoGeral(PLANO); vista("mapa"); aviso(AVISO_INICIO()); desenha(); desenhaConquistas();
+    S = novo(); salva(); if (eu) { eu.remove(); eu = null; } visaoGeral(PLANO); vista("mapa"); aviso(AVISO_INICIO()); desenha(); desenhaConquistas(); turmaAgenda();
   });
   $("bt-kudos").addEventListener("click", () => { const a = demo || S; a.kudos = (a.kudos || 0) + 1; if (!demo) salva(); desenha(); });
 
@@ -675,11 +677,88 @@
     bt.disabled = false; bt.textContent = r;
   });
 
+  /* ---------- turma: nome, amigos no mapa e ranking ---------- */
+  const novoId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) => x.toString(16).padStart(2, "0")).join("");
+  const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { return null; } };
+  let meuId = ls("straga-id"); if (!/^[a-f0-9]{32}$/.test(meuId || "")) { meuId = novoId(); ls("straga-id", meuId); }
+  let meuNome = ls("straga-nome") || "";
+  let partilha = ls("straga-partilha") !== "0";
+  let meuCod = ls("straga-eu") || null, turma = [];
+  const amigos = new Map();
+  $("nome-turma").value = meuNome || (typeof Sessao !== "undefined" ? Sessao.nome : "") || "";
+  $("partilha").checked = partilha;
+  if (meuNome) $("bt-nome").textContent = "Salvo";
+  $("nome-turma").addEventListener("input", () => { $("bt-nome").textContent = meuNome ? "Salvar" : "Entrar"; });
+  $("nome-turma").addEventListener("keydown", (e) => { if (e.key === "Enter") $("bt-nome").click(); });
+  $("bt-nome").addEventListener("click", async () => {
+    const n = $("nome-turma").value.replace(/\s+/g, " ").trim().slice(0, 24);
+    if (!n) { $("nome-turma").focus(); return; }
+    meuNome = n; ls("straga-nome", n); $("bt-nome").textContent = "Salvo"; $("nome-turma").blur();
+    await sincroniza(true);
+  });
+  $("partilha").addEventListener("change", () => { partilha = $("partilha").checked; ls("straga-partilha", partilha ? "1" : "0"); sincroniza(true); });
+  let envioPendente = null, sincronizando = false;
+  function turmaAgenda() { if (demo) return; clearTimeout(envioPendente); envioPendente = setTimeout(() => sincroniza(true), 2500); }
+  async function sincroniza(enviar) {
+    if (sincronizando || document.hidden) return;
+    sincronizando = true;
+    try {
+      let r;
+      if (enviar && meuNome && !demo) {
+        const ult = S.trilha[S.trilha.length - 1];
+        r = await fetch("/api/straga", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+          id: meuId, nome: meuNome, partilha, status: S.status, pos: partilha && S.status === "rodando" && ult ? ult : null,
+          bares: S.checks.length, drinks: S.drinks.length, metros: Math.round(S.metros), conq: Object.keys(S.conq || {}).length }) });
+      } else r = await fetch("/api/straga", { cache: "no-store" });
+      const j = await r.json();
+      if (r.ok) { turma = j.turma || []; if (j.eu) { meuCod = j.eu; ls("straga-eu", meuCod); } desenhaTurma(); }
+    } catch {} finally { sincronizando = false; }
+  }
+  const inicial = (n) => (n || "?").trim().charAt(0).toUpperCase();
+  function desenhaTurma() {
+    // amigos no mapa: só quem está gravando e deixou mostrar
+    if (pronto) {
+      const vivos = new Set();
+      turma.forEach((p) => {
+        if (!p.pos || p.cod === meuCod) return;
+        vivos.add(p.cod);
+        let m = amigos.get(p.cod);
+        if (!m) {
+          const el = document.createElement("div"); el.className = "amigo";
+          el.append(document.createElement("i"), document.createElement("span"));
+          m = new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(p.pos).addTo(mapa); amigos.set(p.cod, m);
+        }
+        const el = m.getElement();
+        el.querySelector("i").textContent = inicial(p.nome); el.querySelector("span").textContent = p.nome;
+        el.title = `${p.nome} · há ${Math.max(1, Math.round(p.ha / 60))} min`;
+        m.setLngLat(p.pos);
+      });
+      amigos.forEach((m, c) => { if (!vivos.has(c)) { m.remove(); amigos.delete(c); } });
+    }
+    // ranking: bares, depois conquistas, depois quilômetros
+    const lista = turma.slice().sort((a, b) => b.bares - a.bares || b.conq - a.conq || b.metros - a.metros || String(a.nome).localeCompare(b.nome, "pt"));
+    const ol = $("ranking"); ol.textContent = "";
+    lista.slice(0, 40).forEach((p, k) => {
+      const li = document.createElement("li"); if (p.cod === meuCod) li.className = "eu";
+      const pos = document.createElement("span"); pos.className = "pos"; pos.textContent = `${k + 1}º`;
+      const av = document.createElement("span"); av.className = "av" + (p.status === "rodando" && p.ha < 300 ? " vivo" : ""); av.textContent = inicial(p.nome);
+      const tx = document.createElement("div"); const b = document.createElement("b"); b.textContent = p.cod === meuCod ? `${p.nome} (você)` : p.nome;
+      const sm = document.createElement("small"); sm.textContent = `${p.conq} ${p.conq === 1 ? "conquista" : "conquistas"} · ${kmN(p.metros)} km · ${p.drinks} 🍸`; tx.append(b, sm);
+      const em = document.createElement("em"); em.textContent = p.bares; const es = document.createElement("span"); es.textContent = p.bares === 1 ? "bar" : "bares"; em.append(es);
+      li.append(pos, av, tx, em); ol.append(li);
+    });
+    const gravando = turma.filter((p) => p.status === "rodando" && p.ha < 300).length;
+    $("turma-n").textContent = turma.length ? `${turma.length} na turma${gravando ? ` · ${gravando} gravando agora` : ""}` : "–";
+    $("ranking-vazio").hidden = turma.length > 0;
+  }
+  setInterval(() => sincroniza(!!meuNome && (S.status === "rodando" || S.status === "pausado")), 20000);
+
   /* ---------- início ---------- */
   iniciaMapa();
   vista(S.status === "rodando" || S.status === "pausado" ? "numeros" : "mapa");
   if (S.status === "rodando" || S.status === "pausado") telaCheia(true); // voltou no meio da Baratona: direto no app
   desenhaConquistas();
+  sincroniza(!!meuNome && S.status !== "parado");
   if (S.status === "rodando") { segue = true; ligaGps(); acordado(true); roda(); aviso("Atividade em andamento. O cronômetro não parou."); }
   else if (S.status === "pausado") aviso("Atividade pausada. Aperte Voltar para continuar.");
   else if (S.status === "parado") aviso(AVISO_INICIO());
