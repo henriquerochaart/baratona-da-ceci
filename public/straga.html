@@ -75,8 +75,6 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .demo-selo{position:absolute;left:10px;top:198px;z-index:2;background:#fff;color:var(--grafite);border-radius:6px;font:700 11px var(--f-app);letter-spacing:.08em;padding:4px 8px}
 .bt-centro{position:absolute;right:10px;top:192px;z-index:2;display:flex;align-items:center;gap:6px;border:0;border-radius:999px;background:#fff;color:var(--grafite);font:700 14px var(--f-app);padding:8px 13px;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
 .bt-centro::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--laranja);box-shadow:0 0 0 3px rgba(252,76,2,.25)}
-.maplibregl-ctrl-attrib{font:11px var(--f-app)}
-.maplibregl-ctrl-bottom-right{bottom:96px}
 .pino{width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--grafite);display:grid;place-items:center;font:700 11px var(--f-app);color:var(--grafite);background-size:cover;background-position:center;box-shadow:0 1px 4px rgba(0,0,0,.45);cursor:default}
 .pino.feito{width:40px;height:40px;border:3px solid #fff;color:transparent;box-shadow:0 0 0 3px var(--laranja),0 3px 8px rgba(0,0,0,.5)}
 .eu{width:22px;height:22px;border-radius:50%;background:var(--laranja);border:5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.55)}
@@ -119,7 +117,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .toast small{display:block;font:500 13px/1.25 var(--f-app);color:var(--cinza)}
 @keyframes entra{from{transform:translateY(-16px) scale(.96);opacity:0}}
 
-.folha{padding:16px;display:flex;flex-direction:column;gap:14px}
+.credito{margin:0;padding:6px 16px 0;font:500 10px var(--f-app);color:#A5A5B0;text-align:right}
+.folha{padding:10px 16px 16px;display:flex;flex-direction:column;gap:14px}
 .folha-topo{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .estado{font:700 12px var(--f-app);letter-spacing:.08em;text-transform:uppercase;color:var(--cinza);display:flex;align-items:center;gap:6px}
 .estado i{width:9px;height:9px;border-radius:50%;background:#B8B8C2}
@@ -254,6 +253,7 @@ html body .som{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));righ
         </div>
         <div class="toast" id="toast" role="status" hidden><img id="toast-img" src="" alt=""><div><span>Conquista desbloqueada</span><b id="toast-nome"></b><small id="toast-desc"></small></div></div>
       </div>
+      <p class="credito">Imagens de satélite: Esri, Maxar, Earthstar Geographics</p>
       <div class="folha">
         <div class="folha-topo">
           <span class="estado" id="estado"><i></i><span id="estado-txt">Parado</span></span>

@@ -134,7 +134,7 @@
   function iniciaMapa() {
     if (typeof maplibregl === "undefined") { $("mapa").textContent = ""; return; }
     try {
-      mapa = new maplibregl.Map({ container: "mapa", style: ESTILO, center: [-46.6905, -23.5615], zoom: 14.6, pitch: 50, bearing: -15, maxPitch: 70, attributionControl: { compact: true } });
+      mapa = new maplibregl.Map({ container: "mapa", style: ESTILO, center: [-46.6905, -23.5615], zoom: 14.6, pitch: 50, bearing: -15, maxPitch: 70, attributionControl: false });
     } catch { return; }
     mapa.on("load", () => {
       mapa.addSource("plano", { type: "geojson", data: linhaGeo(PLANO) });
