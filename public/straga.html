@@ -64,8 +64,10 @@ h1,h2,h3{margin:0;text-wrap:balance}
 #mapa{position:absolute;inset:0}
 .hud{position:absolute;left:0;right:0;top:0;z-index:2;pointer-events:none;padding:18px 10px 70px;text-align:center;color:#fff;
   background:linear-gradient(rgba(0,0,0,.6),rgba(0,0,0,.32) 58%,rgba(0,0,0,0));text-shadow:0 1px 3px rgba(0,0,0,.45)}
-.hud-marca{display:block;height:24px;width:auto;margin:0 auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
-.hud-titulo{margin:10px 0 16px;font:600 16px/1.2 var(--f-app)}
+.hud-lockup{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 14px}
+.hud-lockup i{width:2px;height:30px;border-radius:1px;background:rgba(255,255,255,.55)}
+.hud-marca{display:block;height:24px;width:auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.hud-logo{display:block;height:42px;width:auto;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
 .hud-stats{display:grid;grid-template-columns:repeat(3,1fr)}
 .hud-stats span{display:block;font:500 15px/1.2 var(--f-app)}
 .hud-stats strong{display:block;font:700 clamp(30px,9.4vw,46px)/1.04 var(--f-app);font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin:2px 0}
@@ -208,8 +210,7 @@ html body .som{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));righ
       <div class="tela" id="tela" data-vista="mapa">
         <div id="mapa" role="region" aria-label="Mapa do seu trajeto na Baratona"></div>
         <div class="hud">
-          <img class="hud-marca" src="/straga-marca-branca.svg" alt="Straga" width="479" height="100">
-          <p class="hud-titulo" id="hud-titulo">Baratona da Ceci</p>
+          <div class="hud-lockup"><img class="hud-marca" src="/straga-marca-branca.svg" alt="Straga" width="479" height="100"><i aria-hidden="true"></i><img class="hud-logo" src="/arte/logo.webp" alt="Baratona da Ceci" width="899" height="671"></div>
           <div class="hud-stats" aria-live="off">
             <div><span>Tempo</span><strong id="s-tempo">0:00</strong><em id="s-tempo-u">min</em></div>
             <div><span>Drinks</span><strong id="s-drinks">0</strong><em id="s-drinks-u">em 0 bares</em></div>

@@ -48,8 +48,6 @@
   const km = (m) => kmN(m) + " km";
   const pace = (ms, n) => (n ? Math.round(ms / n / 60000) + "′/bar" : "–");
   const hhmm = (ms) => { const m = Math.floor(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m} min`; };
-  // nome da atividade pela hora de início, como o Strava faz ("Corrida à tarde")
-  const nomeAtividade = (h) => (h >= 18 || h < 5 ? "Baratona noturna" : h >= 12 ? "Baratona à tarde" : "Baratona matinal");
 
   /* ---------- estado ---------- */
   const novo = () => ({ status: "parado", acum: 0, desde: 0, inicioEm: 0, trilha: [], metros: 0, checks: [], kudos: 0, drinks: [], menos: 0, conq: {} });
@@ -350,11 +348,6 @@
   }
 
   /* ---------- tela ---------- */
-  function titulo() {
-    if (demo) return nomeAtividade(13);
-    if (S.inicioEm) return nomeAtividade(new Date(S.inicioEm).getHours());
-    return "Baratona da Ceci";
-  }
   function proximoBar() {
     const a = demo || S, feitos = new Set(a.checks.map((c) => c.id)), aqui = ondeEstou();
     const resto = BARS.filter((b) => !feitos.has(b.id));
@@ -378,7 +371,6 @@
   function desenha() {
     const a = demo || S, st = demo ? (demo.fim ? "fim" : "rodando") : S.status;
     desenhaStats();
-    $("hud-titulo").textContent = titulo();
     $("estado").classList.toggle("on", st === "rodando");
     $("estado-txt").textContent = demo ? (demo.fim ? "Demo: fim" : "Demo") : { parado: "Parado", rodando: "Gravando", pausado: "Pausado", fim: "Finalizado" }[st];
     const play = $("bt-play");
@@ -419,7 +411,7 @@
     $("resumo").hidden = !fim;
     if (fim) {
       const t = tempo(), n = a.checks.length;
-      $("r-titulo").textContent = demo ? `${nomeAtividade(13)} (demo)` : titulo();
+      $("r-titulo").textContent = demo ? "Baratona da Ceci (demo)" : "Baratona da Ceci";
       $("r-sub").textContent = (demo ? "28/11 · Pinheiros e Vila Madalena" : `${new Date(S.inicioEm || Date.now()).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · ${hhmm(t)} de Baratona`) + ` · Pace fofoca ${pace(t, n)}`;
       $("r-tempo").textContent = relogio(t); $("r-dist").textContent = km(demo ? demo.metros : S.metros);
       $("r-bares").textContent = `${n}/${TOTAL}`; $("r-drinks").textContent = a.drinks.length;
@@ -434,6 +426,18 @@
   /* ---------- imagem da atividade (1080x1920, estilo flyover) ---------- */
   const carrega = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
   function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+  // STRAGA à esquerda, logo da Baratona à direita, centralizados como um par
+  function cabecalho(g, W, cy, marcaImg, logoImg, corFio) {
+    const mh = 78, mw = marcaImg ? (marcaImg.width / marcaImg.height) * mh : 0;
+    const lh = 128, lw = logoImg ? (logoImg.width / logoImg.height) * lh : 0;
+    const gap = 34, fio = 4, total = mw + (logoImg ? gap * 2 + fio + lw : 0);
+    let x = (W - total) / 2;
+    if (marcaImg) g.drawImage(marcaImg, x, cy - mh / 2, mw, mh);
+    if (!logoImg) return;
+    x += mw + gap; g.fillStyle = corFio; g.fillRect(x, cy - 46, fio, 92);
+    x += fio + gap; g.drawImage(logoImg, x, cy - lh / 2, lw, lh);
+  }
 
   // satélite inclinado fora da tela; devolve o canvas e a projeção lng/lat -> pixel
   function fundoSatelite(coords, W, H) {
@@ -514,18 +518,16 @@
 
     // marca, título e números
     g.save(); g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 8; g.shadowOffsetY = 2;
-    const marcaImg = await carrega("/straga-marca-branca.svg");
-    if (marcaImg) { const mh = 78, mw = (marcaImg.width / marcaImg.height) * mh; g.drawImage(marcaImg, (W - mw) / 2, 130, mw, mh); }
+    const [marcaImg, logoImg] = await Promise.all([carrega("/straga-marca-branca.svg"), carrega("/arte/logo.webp")]);
+    cabecalho(g, W, 175, marcaImg, logoImg, "rgba(255,255,255,.6)");
     g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.font = '600 44px "Barlow", system-ui, sans-serif';
-    g.fillText(demo ? nomeAtividade(13) : titulo(), W / 2, 300);
     const t = tempo(), n = a.checks.length, m = demo ? demo.metros : S.metros;
     const [tv, tu] = tempoCurto(t);
     [["Tempo", tv, tu], ["Drinks", String(a.drinks.length), `em ${n} ${n === 1 ? "bar" : "bares"}`], ["Distância", kmN(m), "km"]].forEach(([k, v, u], i) => {
       const x = (W / 6) * (1 + i * 2);
-      g.font = '500 38px "Barlow", system-ui, sans-serif'; g.fillText(k, x, 420);
-      g.font = '700 118px "Barlow", system-ui, sans-serif'; g.fillText(v, x, 540);
-      g.font = '700 42px "Barlow", system-ui, sans-serif'; g.fillText(u, x, 604);
+      g.font = '500 38px "Barlow", system-ui, sans-serif'; g.fillText(k, x, 380);
+      g.font = '700 118px "Barlow", system-ui, sans-serif'; g.fillText(v, x, 500);
+      g.font = '700 42px "Barlow", system-ui, sans-serif'; g.fillText(u, x, 564);
     });
     // rodapé
     g.textAlign = "left"; g.font = '700 36px "Barlow", system-ui, sans-serif';
@@ -554,8 +556,8 @@
     const g = c.getContext("2d");
     g.fillStyle = "#F5E9D4"; g.fillRect(0, 0, W, H);
     g.fillStyle = "rgba(42,29,34,.06)"; for (let y = 0; y < H; y += 14) for (let x = (y / 14) % 2 ? 7 : 0; x < W; x += 14) g.fillRect(x, y, 2, 2);
-    const marcaImg = await carrega("/straga-marca.svg");
-    if (marcaImg) { const mh = 90, mw = (marcaImg.width / marcaImg.height) * mh; g.drawImage(marcaImg, (W - mw) / 2, 90, mw, mh); }
+    const [marcaImg, logoImg] = await Promise.all([carrega("/straga-marca.svg"), carrega("/arte/logo-vermelho.webp")]);
+    cabecalho(g, W, 140, marcaImg, logoImg, "rgba(42,29,34,.35)");
     const t = tempo(), n = a.checks.length, m = demo ? demo.metros : S.metros;
     const [tv, tu] = tempoCurto(t);
     g.fillStyle = "#242428"; g.textAlign = "center";
