@@ -190,24 +190,66 @@
   let gps = null, trava = null;
   function ligaGps() {
     if (!("geolocation" in navigator)) { aviso("Este navegador não tem GPS. Dá pra marcar os bares pela lista.", true); return; }
-    gps = navigator.geolocation.watchPosition((p) => {
-      if (S.status !== "rodando" || demo) return;
-      const { longitude: lon, latitude: lat, accuracy } = p.coords;
-      if (accuracy > 60) return; // leitura ruim
-      const ll = [lon, lat], ult = S.trilha[S.trilha.length - 1];
-      if (ult) { const d = dist(ult, ll); if (d < 6) { posicaoEu(ll); return; } S.metros += d; }
-      S.trilha.push([+lon.toFixed(6), +lat.toFixed(6)]);
-      posicaoEu(ll); camera(ll, ult, false); salva(); desenha();
-    }, (e) => {
+    gps = navigator.geolocation.watchPosition(ponto, (e) => {
       aviso(e.code === 1 ? "O GPS foi bloqueado. Libere a localização para o site nas configurações do navegador; enquanto isso, marque os bares pela lista." : "Não deu para ler o GPS agora. Continue: os checkpoints funcionam pela lista.", true);
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
   }
   const desligaGps = () => { if (gps != null) navigator.geolocation.clearWatch(gps); gps = null; };
+
+  /* Celular bloqueado: o navegador não lê GPS em segundo plano (Safari e Chrome não deixam).
+     O tempo continua contando pelo relógio; quando a pessoa volta, o primeiro ponto novo fica longe do
+     último e o Straga completa esse trecho pelas ruas (rota a pé), em vez de uma linha reta. */
+  const LACUNA = 80; // m entre dois pontos: acima disso, foi um trecho sem GPS
+  let preenchendo = false;
+  const metrosTxt = (m) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`);
+  async function rotaAPe(a, b) {
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/driving/${a[0]},${a[1]};${b[0]},${b[1]}?overview=full&geometries=geojson`, { signal: ctl.signal });
+      clearTimeout(t);
+      const rt = ((await r.json()).routes || [])[0];
+      if (!rt) return null;
+      const reta = dist(a, b);
+      if (rt.distance > reta * 3 + 300 || rt.distance > 8000) return null; // rota sem sentido: fica a linha reta
+      return { coords: rt.geometry.coordinates.map(([x, y]) => [+x.toFixed(6), +y.toFixed(6)]), metros: rt.distance };
+    } catch { return null; }
+  }
+  async function ponto(p) {
+    if (S.status !== "rodando" || demo) return;
+    const { longitude: lon, latitude: lat, accuracy } = p.coords;
+    if (accuracy > 60) return; // leitura ruim
+    const ll = [+lon.toFixed(6), +lat.toFixed(6)], ult = S.trilha[S.trilha.length - 1];
+    if (ult) {
+      const d = dist(ult, ll);
+      if (d < 6) { posicaoEu(ll); return; }
+      if (d > LACUNA) {
+        if (preenchendo) return;
+        const sumiu = Date.now() - (S.ultimoEm || 0) > 45000; // ficou um tempo sem GPS (tela bloqueada)
+        preenchendo = true; if (sumiu) aviso("Completando o trajeto de quando o celular estava bloqueado…");
+        const r = await rotaAPe(ult, ll);
+        preenchendo = false;
+        if (S.status !== "rodando" || S.trilha[S.trilha.length - 1] !== ult) return; // pausou ou mudou no meio
+        if (r) { S.trilha.push(...r.coords.slice(1, -1)); S.metros += r.metros; if (sumiu) aviso(`De volta! Completei ${metrosTxt(r.metros)} pelas ruas enquanto o celular estava bloqueado.`); }
+        else { S.metros += d; if (sumiu) aviso(`De volta! Somei ${metrosTxt(d)} em linha reta (não deu para traçar pelas ruas).`); }
+      } else S.metros += d;
+    }
+    S.trilha.push(ll); S.ultimoEm = Date.now();
+    posicaoEu(ll); camera(ll, ult, false); salva(); desenha(); checaConquistas();
+  }
+  // voltou para a tela: religa o GPS (o iOS às vezes larga o watch) e pede a posição na hora
+  function voltou() {
+    if (document.hidden || S.status !== "rodando" || demo) return;
+    acordado(true); desenhaStats();
+    if (!("geolocation" in navigator)) return;
+    desligaGps(); ligaGps();
+    navigator.geolocation.getCurrentPosition(ponto, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+  }
   async function acordado(on) {
     try { if (on && "wakeLock" in navigator && !trava) { trava = await navigator.wakeLock.request("screen"); trava.addEventListener("release", () => (trava = null)); } } catch {}
     if (!on && trava) { trava.release().catch(() => {}); trava = null; }
   }
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && S.status === "rodando" && !demo) acordado(true); });
+  document.addEventListener("visibilitychange", voltou);
+  window.addEventListener("pageshow", (e) => { if (e.persisted) voltou(); });
 
   /* ---------- bar mais perto ---------- */
   function ondeEstou() {
