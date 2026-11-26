@@ -1,10 +1,22 @@
 /* Straga: cronômetro + GPS + checkpoint com selfie, tudo no celular (localStorage).
+   Visual de Strava: satélite inclinado, câmera seguindo o trajeto, números em branco por cima do mapa.
    Modo demonstração: percorre o PERCURSO.linha acelerado, com selfies de exemplo. */
 (function () {
   const $ = (id) => document.getElementById(id);
   const CHAVE = "straga-atividade";
   const RAIO = 80; // metros para sugerir um bar como "aqui"
   const PERTO = 400;
+  const LARANJA = "#FC4C02";
+  const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const CREDITO = "Imagens © Esri, Maxar, Earthstar Geographics";
+  const ESTILO = {
+    version: 8,
+    sources: { sat: { type: "raster", tiles: [SAT], tileSize: 256, maxzoom: 19, attribution: CREDITO } },
+    layers: [
+      { id: "fundo", type: "background", paint: { "background-color": "#1E2A22" } },
+      { id: "sat", type: "raster", source: "sat", paint: { "raster-fade-duration": 0 } },
+    ],
+  };
 
   /* ---------- paradas do percurso ---------- */
   const idx = new Map(BARES.map((b) => [b.id, b]));
@@ -13,20 +25,34 @@
     return { id: p.id, n: i + 1, hora: p.hora, nome: p.nome || b.nome, end: p.end || b.end, lat: p.lat ?? b.lat, lon: p.lon ?? b.lon };
   }).filter((b) => b.nome && typeof b.lat === "number");
   const TOTAL = BARS.length;
-
+  const PLANO = PERCURSO.linha && PERCURSO.linha.length ? PERCURSO.linha : BARS.map((b) => [b.lon, b.lat]);
+  
   /* ---------- utilitários ---------- */
   const R = 6371000, rad = (g) => (g * Math.PI) / 180;
   const dist = ([lo1, la1], [lo2, la2]) => {
     const a = Math.sin(rad(la2 - la1) / 2) ** 2 + Math.cos(rad(la1)) * Math.cos(rad(la2)) * Math.sin(rad(lo2 - lo1) / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
   };
+  const rumo = ([lo1, la1], [lo2, la2]) => {
+    const y = Math.sin(rad(lo2 - lo1)) * Math.cos(rad(la2));
+    const x = Math.cos(rad(la1)) * Math.sin(rad(la2)) - Math.sin(rad(la1)) * Math.cos(rad(la2)) * Math.cos(rad(lo2 - lo1));
+    return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+  };
   const relogio = (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
-  const km = (m) => (m / 1000).toFixed(2).replace(".", ",") + " km";
+  // no HUD: mm:ss na primeira hora, depois h:mm
+  const tempoCurto = (ms) => {
+    const s = Math.floor(ms / 1000);
+    return s < 3600 ? [`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`, "min"] : [`${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}`, "h"];
+  };
+  const kmN = (m) => (m / 1000).toFixed(2).replace(".", ",");
+  const km = (m) => kmN(m) + " km";
   const pace = (ms, n) => (n ? Math.round(ms / n / 60000) + "′/bar" : "–");
   const hhmm = (ms) => { const m = Math.floor(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m} min`; };
+  // nome da atividade pela hora de início, como o Strava faz ("Corrida à tarde")
+  const nomeAtividade = (h) => (h >= 18 || h < 5 ? "Baratona noturna" : h >= 12 ? "Baratona à tarde" : "Baratona matinal");
 
   /* ---------- estado ---------- */
-  const novo = () => ({ status: "parado", acum: 0, desde: 0, inicioEm: 0, trilha: [], metros: 0, checks: [], kudos: 0 });
+  const novo = () => ({ status: "parado", acum: 0, desde: 0, inicioEm: 0, trilha: [], metros: 0, checks: [], kudos: 0, drinks: [], menos: 0, conq: {} });
   let S = novo(), demo = null;
   try { const s = JSON.parse(localStorage.getItem(CHAVE) || "null"); if (s && s.status) S = { ...novo(), ...s }; } catch {}
   const salva = () => { if (demo) return; try { localStorage.setItem(CHAVE, JSON.stringify(S)); } catch { aviso("O celular não deixou salvar. Se fechar a página, a atividade se perde.", true); } };
@@ -34,32 +60,128 @@
 
   function aviso(t, erro) { const a = $("aviso"); a.textContent = t; a.classList.toggle("erro", !!erro); }
 
+  /* ---------- conquistas ---------- */
+  const CONQ = [
+    { id: "gole", nome: "Primeiro gole", desc: "Registrou o primeiro drink.", ok: (a) => a.drinks.length >= 1 },
+    { id: "esquenta", nome: "Esquenta", desc: "3 drinks na conta.", ok: (a) => a.drinks.length >= 3 },
+    { id: "doidera", nome: "Doidera", desc: "5 drinks em menos de 1 hora.", ok: (a) => a.drinks.some((t, i) => i >= 4 && t - a.drinks[i - 4] <= 3600000) },
+    { id: "pinguco", nome: "Pinguço", desc: "10 drinks na conta.", ok: (a) => a.drinks.length >= 10 },
+    { id: "bebum", nome: "Bebum oficial", desc: "15 drinks na conta.", ok: (a) => a.drinks.length >= 15 },
+    { id: "perdeu", nome: "Perdeu a conta", desc: "20 drinks. Ou mais, sei lá.", ok: (a) => a.drinks.length >= 20 },
+    { id: "quemeu", nome: "Quem? Eu?", desc: "Tirou um drink da conta.", ok: (a) => (a.menos || 0) > 0 },
+    { id: "primeirobar", nome: "Primeiro bar", desc: "Primeiro checkpoint com selfie.", ok: (a) => a.checks.length >= 1 },
+    { id: "selfie", nome: "Rainha da selfie", desc: "10 checkpoints com selfie.", ok: (a) => a.checks.length >= 10 },
+    { id: "meia", nome: "Meia Baratona", desc: "13 bares.", ok: (a) => a.checks.length >= 13 },
+    { id: "completa", nome: "Baratona completa", desc: `Os ${TOTAL} bares.`, ok: (a) => a.checks.length >= TOTAL },
+    { id: "pedecana", nome: "Pé de cana", desc: "5 km andados.", ok: (a) => metrosDe(a) >= 5000 },
+    { id: "fofoca", nome: "Pace fofoca", desc: "40 minutos no mesmo bar.", ok: (a) => a.checks.some((c, i) => (i + 1 < a.checks.length ? a.checks[i + 1].t : tempo()) - c.t >= 40 * 60000) },
+    { id: "madrugada", nome: "Até o sol raiar", desc: "Ainda na Baratona depois da meia-noite.", ok: (a) => !demo && S.status === "rodando" && S.inicioEm && new Date().getHours() < 6 && new Date().toDateString() !== new Date(S.inicioEm).toDateString() },
+  ];
+  const conqImg = (id) => `/conquistas/${id}.svg`;
+  const metrosDe = (a) => (a === demo ? demo.metros : S.metros);
+  const filaToast = []; let toastAtivo = false;
+  function checaConquistas() {
+    const a = demo || S; a.conq = a.conq || {};
+    let nova = false;
+    CONQ.forEach((c) => { if (!a.conq[c.id] && c.ok(a)) { a.conq[c.id] = Math.round(tempo()); filaToast.push(c); nova = true; } });
+    if (nova) { if (!demo) salva(); mostraToast(); desenhaConquistas(); }
+  }
+  function mostraToast() {
+    if (toastAtivo || !filaToast.length) return;
+    const c = filaToast.shift(); toastAtivo = true;
+    $("toast-img").src = conqImg(c.id); $("toast-nome").textContent = c.nome; $("toast-desc").textContent = c.desc;
+    const t = $("toast"); t.hidden = false; t.style.animation = "none"; void t.offsetWidth; t.style.animation = "";
+    try { navigator.vibrate && navigator.vibrate(60); } catch {}
+    setTimeout(() => { t.hidden = true; toastAtivo = false; mostraToast(); }, demo ? 2200 : 3600);
+  }
+  function desenhaConquistas() {
+    const a = demo || S, feitas = a.conq || {}, ul = $("conq-lista"); ul.textContent = "";
+    CONQ.forEach((c) => {
+      const li = document.createElement("li"); const ok = !!feitas[c.id];
+      li.className = ok ? "" : "bloq"; li.title = c.desc;
+      const im = document.createElement("img"); im.src = conqImg(c.id); im.alt = ""; im.loading = "lazy";
+      li.append(im, ok ? c.nome : "???"); ul.append(li);
+    });
+    $("conq-n").textContent = `${Object.keys(feitas).length} de ${CONQ.length}`;
+  }
+
+  /* ---------- drinks ---------- */
+  function drink(delta) {
+    const a = demo || S;
+    if (!demo && S.status !== "rodando" && S.status !== "pausado") { aviso("Aperte Iniciar antes de contar os drinks."); return; }
+    if (delta > 0) a.drinks.push(Math.round(tempo()));
+    else if (a.drinks.length) { a.drinks.pop(); a.menos = (a.menos || 0) + 1; }
+    else return;
+    if (!demo) salva();
+    desenhaStats(); checaConquistas();
+  }
+  $("bt-mais").addEventListener("click", () => drink(1));
+  $("bt-menos").addEventListener("click", () => drink(-1));
+
+  /* ---------- vistas: números x mapa ---------- */
+  const ICO_MAPA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.2A7 7 0 0 1 19 9.8C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.8" r="2.6"/></svg>';
+  const ICO_NUM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h9"/></svg>';
+  function vista(v) {
+    $("tela").dataset.vista = v;
+    $("bt-vista").innerHTML = v === "mapa" ? ICO_NUM : ICO_MAPA;
+    $("bt-vista").setAttribute("aria-label", v === "mapa" ? "Ver os números" : "Ver o mapa");
+    if (v === "mapa" && mapa) setTimeout(() => mapa.resize(), 30);
+  }
+  $("bt-vista").addEventListener("click", () => vista($("tela").dataset.vista === "mapa" ? "numeros" : "mapa"));
+
   /* ---------- mapa ---------- */
-  let mapa = null, pronto = false, eu = null;
+  let mapa = null, pronto = false, eu = null, segue = false, rumoAtual = null;
   const pinos = new Map();
+  const linhaGeo = (c) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: c } });
   function iniciaMapa() {
     if (typeof maplibregl === "undefined") { $("mapa").textContent = ""; return; }
     try {
-      mapa = new maplibregl.Map({ container: "mapa", style: "https://tiles.openfreemap.org/styles/liberty", center: [-46.6905, -23.5615], zoom: 14.3, attributionControl: { compact: true } });
+      mapa = new maplibregl.Map({ container: "mapa", style: ESTILO, center: [-46.6905, -23.5615], zoom: 14.6, pitch: 50, bearing: -15, maxPitch: 70, attributionControl: { compact: true } });
     } catch { return; }
-    mapa.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     mapa.on("load", () => {
-      mapa.addSource("plano", { type: "geojson", data: linhaGeo(PERCURSO.linha || BARS.map((b) => [b.lon, b.lat])) });
-      mapa.addLayer({ id: "plano", type: "line", source: "plano", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#6A5258", "line-width": 3, "line-opacity": 0.45, "line-dasharray": [1.5, 1.5] } });
+      mapa.addSource("plano", { type: "geojson", data: linhaGeo(PLANO) });
+      mapa.addLayer({ id: "plano", type: "line", source: "plano", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FFFFFF", "line-width": 3, "line-opacity": 0.6, "line-dasharray": [1.2, 1.6] } });
       mapa.addSource("trilha", { type: "geojson", data: linhaGeo([]) });
-      mapa.addLayer({ id: "trilha-borda", type: "line", source: "trilha", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FCF6EA", "line-width": 9 } });
-      mapa.addLayer({ id: "trilha", type: "line", source: "trilha", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FC4C02", "line-width": 5 } });
-      const b = new maplibregl.LngLatBounds(); BARS.forEach((x) => b.extend([x.lon, x.lat]));
-      mapa.fitBounds(b, { padding: 36, duration: 0 });
+      mapa.addLayer({ id: "trilha-borda", type: "line", source: "trilha", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#2A0E00", "line-width": 10, "line-opacity": 0.5 } });
+      mapa.addLayer({ id: "trilha", type: "line", source: "trilha", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": LARANJA, "line-width": 6 } });
       BARS.forEach((x) => {
         const el = document.createElement("div"); el.className = "pino"; el.textContent = x.n; el.title = `${x.n}. ${x.nome}`;
         pinos.set(x.id, el);
         new maplibregl.Marker({ element: el }).setLngLat([x.lon, x.lat]).addTo(mapa);
       });
-      pronto = true; desenha();
+      pronto = true;
+      const ult = ondeEstou();
+      if (ult && (S.status === "rodando" || S.status === "pausado")) { posicaoEu(ult); segue = S.status === "rodando"; camera(ult, null, false); }
+      else visaoGeral(S.status === "fim" && S.trilha.length > 1 ? S.trilha : PLANO, 0);
+      desenha();
     });
+    // mexeu no mapa com o dedo: para de seguir até tocar em "Seguir"
+    ["dragstart", "rotatestart", "pitchstart", "zoomstart"].forEach((ev) => mapa.on(ev, (e) => {
+      if (!e.originalEvent || !segue) return;
+      segue = false; $("bt-centro").hidden = false;
+    }));
   }
-  const linhaGeo = (c) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: c } });
+  function visaoGeral(coords, dur = 900) {
+    if (!mapa || !coords || coords.length < 2) return;
+    const b = new maplibregl.LngLatBounds(); coords.forEach((c) => b.extend(c));
+    const cam = mapa.cameraForBounds(b, { padding: { top: 200, bottom: 50, left: 30, right: 30 }, bearing: -15 });
+    if (!cam) return;
+    mapa.easeTo({ center: cam.center, zoom: Math.min(cam.zoom - 0.3, 16.5), bearing: -15, pitch: 50, duration: dur });
+  }
+  function camera(ll, anterior, suave) {
+    if (!mapa || !pronto || !segue || !ll) return;
+    if (anterior && dist(anterior, ll) > 2) {
+      const r = rumo(anterior, ll);
+      if (rumoAtual == null) rumoAtual = r;
+      else { const d = ((r - rumoAtual + 540) % 360) - 180; rumoAtual = (rumoAtual + d * (suave ? 0.08 : 0.5) + 360) % 360; }
+    }
+    mapa.easeTo({ center: ll, bearing: rumoAtual ?? mapa.getBearing(), pitch: 62, zoom: 16.6, duration: suave ? 160 : 900, easing: (t) => t, offset: [0, 70] });
+  }
+  $("bt-centro").addEventListener("click", () => {
+    segue = true; $("bt-centro").hidden = true;
+    const t = demo ? demo.trilha : S.trilha;
+    camera(t[t.length - 1], t[t.length - 2], false);
+  });
 
   function posicaoEu(ll) {
     if (!mapa) return;
@@ -78,7 +200,7 @@
       const ll = [lon, lat], ult = S.trilha[S.trilha.length - 1];
       if (ult) { const d = dist(ult, ll); if (d < 6) { posicaoEu(ll); return; } S.metros += d; }
       S.trilha.push([+lon.toFixed(6), +lat.toFixed(6)]);
-      posicaoEu(ll); salva(); desenha();
+      posicaoEu(ll); camera(ll, ult, false); salva(); desenha();
     }, (e) => {
       aviso(e.code === 1 ? "O GPS foi bloqueado. Libere a localização para o site nas configurações do navegador; enquanto isso, marque os bares pela lista." : "Não deu para ler o GPS agora. Continue: os checkpoints funcionam pela lista.", true);
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
@@ -125,7 +247,9 @@
       im.src = url;
     });
   }
-  $("bt-selfie").addEventListener("click", () => { $("arquivo").value = ""; $("arquivo").click(); });
+  const abreCamera = () => { preencheBares(); if (!$("bar-sel").value) return; $("arquivo").value = ""; $("arquivo").click(); };
+  $("bt-selfie").addEventListener("click", abreCamera);
+  $("bt-foto").addEventListener("click", abreCamera);
   $("arquivo").addEventListener("change", async (e) => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     const b = BARS.find((x) => x.id === $("bar-sel").value); if (!b) return;
@@ -141,17 +265,19 @@
     alvo.push({ id: b.id, n: b.n, nome: b.nome, t: tempo(), selfie });
     if (!demo) salva();
     aviso(`Checkpoint no ${b.nome}! ${alvo.length} de ${TOTAL} 🍻`);
-    desenha();
+    desenha(); checaConquistas();
   }
 
   /* ---------- controles ---------- */
   let tique = null;
-  function roda() { clearInterval(tique); tique = setInterval(desenhaStats, 1000); }
+  function roda() { clearInterval(tique); let n = 0; tique = setInterval(() => { desenhaStats(); if (++n % 30 === 0) checaConquistas(); }, 1000); }
   $("bt-play").addEventListener("click", () => {
     if (demo) paraDemo();
     if (S.status === "parado" || S.status === "pausado") {
       if (S.status === "parado") { S = { ...novo(), status: "rodando", desde: Date.now(), inicioEm: Date.now() }; aviso("Valendo! O trajeto aparece em laranja no mapa."); }
       else { S.status = "rodando"; S.desde = Date.now(); aviso("De volta à Baratona."); }
+      segue = true; $("bt-centro").hidden = true;
+      if (S.status === "rodando" && !S.acum) vista("numeros");
       ligaGps(); acordado(true); roda();
     } else if (S.status === "rodando") {
       S.acum += Date.now() - S.desde; S.status = "pausado"; desligaGps(); acordado(false); aviso("Pausado. O tempo parou.");
@@ -159,9 +285,10 @@
     salva(); desenha();
   });
   $("bt-fim").addEventListener("click", () => {
-    if (demo) { demo.fim = true; clearInterval(demo.tick); desenha(); return; }
+    if (demo) { demo.fim = true; clearInterval(demo.tick); segue = false; visaoGeral(demo.trilha); desenha(); return; }
     if (S.status === "rodando") S.acum += Date.now() - S.desde;
-    S.status = "fim"; desligaGps(); acordado(false); clearInterval(tique); salva(); desenha();
+    S.status = "fim"; desligaGps(); acordado(false); clearInterval(tique); segue = false; $("bt-centro").hidden = true; vista("mapa");
+    visaoGeral(S.trilha.length > 1 ? S.trilha : PLANO); salva(); desenha();
     $("resumo").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   $("bt-zera").addEventListener("click", () => {
@@ -169,7 +296,7 @@
     const bt = $("bt-zera");
     if (bt.dataset.certeza !== "1") { bt.dataset.certeza = "1"; bt.textContent = "Apagar atividade? Toque de novo"; setTimeout(() => { bt.dataset.certeza = ""; bt.textContent = "Recomeçar"; }, 4000); return; }
     bt.dataset.certeza = ""; bt.textContent = "Recomeçar";
-    S = novo(); salva(); aviso("Aperte Iniciar onde você estiver."); desenha();
+    S = novo(); salva(); if (eu) { eu.remove(); eu = null; } visaoGeral(PLANO); vista("mapa"); aviso("Aperte Iniciar onde você estiver."); desenha(); desenhaConquistas();
   });
   $("bt-kudos").addEventListener("click", () => { const a = demo || S; a.kudos = (a.kudos || 0) + 1; if (!demo) salva(); desenha(); });
 
@@ -178,53 +305,91 @@
   $("bt-demo").addEventListener("click", () => {
     if (S.status === "rodando") { aviso("Você está com uma atividade rodando. Pause ou finalize antes da demonstração.", true); return; }
     comecaDemo();
-    $("mapa").scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelector(".tela").scrollIntoView({ behavior: "smooth", block: "center" });
   });
   function comecaDemo() {
     paraDemo();
-    const linha = PERCURSO.linha && PERCURSO.linha.length ? PERCURSO.linha : BARS.map((b) => [b.lon, b.lat]);
+    const linha = PLANO;
     const acum = [0]; for (let i = 1; i < linha.length; i++) acum.push(acum[i - 1] + dist(linha[i - 1], linha[i]));
     const total = acum[acum.length - 1], DUR = 45000, JORNADA = (10 * 60 + 25) * 60000; // 13h → 23h25
     const ini = performance.now();
     const ordem = BARS.map((b) => { let m = 0, best = Infinity; linha.forEach((p, i) => { const d = dist(p, [b.lon, b.lat]); if (d < best) { best = d; m = acum[i]; } }); return { b, m }; });
-    demo = { trilha: [], checks: [], relogio: 0, metros: 0, kudos: 0, fim: false };
+    demo = { trilha: [], checks: [], relogio: 0, metros: 0, kudos: 0, fim: false, inicio: 13, drinks: [], menos: 0, conq: {} };
+    vista("mapa"); desenhaConquistas();
     $("demo-selo").hidden = false;
+    segue = true; rumoAtual = null; $("bt-centro").hidden = true;
     let k = 0, f = 0;
     demo.tick = setInterval(() => {
       const fr = Math.min(1, (performance.now() - ini) / DUR), alvo = fr * total;
       while (k < linha.length && acum[k] <= alvo) { demo.trilha.push(linha[k]); k++; }
+      // ponto interpolado entre dois vértices: a câmera anda sem tranco
+      let aqui = demo.trilha[demo.trilha.length - 1];
+      if (k > 0 && k < linha.length) { const a = linha[k - 1], b = linha[k], t = (alvo - acum[k - 1]) / (acum[k] - acum[k - 1] || 1); aqui = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
       demo.metros = alvo; demo.relogio = fr * JORNADA;
-      const ult = demo.trilha[demo.trilha.length - 1]; if (ult) posicaoEu(ult);
-      ordem.forEach(({ b, m }) => { if (m <= alvo && !demo.checks.some((c) => c.id === b.id)) marca(b, FOTOS[f++ % FOTOS.length]); });
-      if (fr >= 1) { demo.fim = true; clearInterval(demo.tick); aviso("Fim da demonstração. Lá embaixo está a atividade que sai no final."); }
+      if (aqui) { posicaoEu(aqui); camera(aqui, demo.ant, true); demo.ant = aqui; }
+      ordem.forEach(({ b, m }) => {
+        if (m <= alvo && !demo.checks.some((c) => c.id === b.id)) {
+          marca(b, FOTOS[f++ % FOTOS.length]);
+          drink(1); if (b.n % 3 === 0 || (b.n >= 4 && b.n <= 6)) drink(1); // uns bares rendem dois
+          if (b.n === 9) drink(-1);
+        }
+      });
+      if (fr >= 1) { demo.fim = true; clearInterval(demo.tick); segue = false; visaoGeral(demo.trilha, 1600); aviso("Fim da demonstração. Lá embaixo está a atividade que sai no final."); }
       desenha();
     }, 120);
     aviso("Demonstração: 10 horas de Baratona em 45 segundos.");
     desenha();
   }
   function paraDemo() {
-    if (!demo) return; clearInterval(demo.tick); demo = null; $("demo-selo").hidden = true;
+    if (!demo) return; clearInterval(demo.tick); demo = null; $("demo-selo").hidden = true; segue = false; $("bt-centro").hidden = true;
+    filaToast.length = 0; $("toast").hidden = true; toastAtivo = false; desenhaConquistas();
     if (eu) { eu.remove(); eu = null; }
     const ult = S.trilha[S.trilha.length - 1]; if (ult) posicaoEu(ult);
+    visaoGeral(S.trilha.length > 1 ? S.trilha : PLANO);
     aviso(S.status === "parado" ? "Aperte Iniciar onde você estiver." : "");
   }
 
   /* ---------- tela ---------- */
+  function titulo() {
+    if (demo) return nomeAtividade(13);
+    if (S.inicioEm) return nomeAtividade(new Date(S.inicioEm).getHours());
+    return "Baratona da Ceci";
+  }
+  function proximoBar() {
+    const a = demo || S, feitos = new Set(a.checks.map((c) => c.id)), aqui = ondeEstou();
+    const resto = BARS.filter((b) => !feitos.has(b.id));
+    if (!resto.length) return null;
+    if (!aqui) return { b: resto[0], d: null };
+    return resto.map((b) => ({ b, d: dist(aqui, [b.lon, b.lat]) })).sort((x, z) => x.d - z.d)[0];
+  }
   function desenhaStats() {
-    const a = demo || S, n = a.checks.length, t = tempo(), m = demo ? demo.metros : S.metros;
-    $("s-tempo").textContent = relogio(t); $("s-dist").textContent = km(m);
-    $("s-bares").textContent = `${n}/${TOTAL}`; $("s-pace").textContent = pace(t, n);
+    const a = demo || S, n = a.checks.length, t = tempo(), m = demo ? demo.metros : S.metros, dr = a.drinks.length;
+    const [v, u] = tempoCurto(t);
+    $("s-tempo").textContent = v; $("s-tempo-u").textContent = u;
+    $("s-drinks").textContent = dr; $("s-drinks-u").textContent = `em ${n} ${n === 1 ? "bar" : "bares"}`;
+    $("s-dist").textContent = kmN(m); $("s-bares").textContent = `${n}/${TOTAL}`; $("s-pace").textContent = pace(t, n);
+    $("n-tempo").textContent = relogio(t); $("n-drinks").textContent = dr; $("n-km").textContent = kmN(m);
+    $("n-media").textContent = t >= 10 * 60000 ? (dr / (t / 3600000)).toFixed(1).replace(".", ",") : "–";
+    $("n-bares").textContent = `${n} de ${TOTAL}`; $("n-pace").textContent = pace(t, n);
+    const p = proximoBar();
+    $("n-prox-l").textContent = p ? "Próximo bar" : "Fim da lista";
+    $("n-prox").textContent = p ? `${p.b.nome.length > 16 ? p.b.nome.slice(0, 15) + "…" : p.b.nome}${p.d != null ? ` · ${p.d < 1000 ? Math.round(p.d) + " m" : (p.d / 1000).toFixed(1).replace(".", ",") + " km"}` : ""}` : "🎉";
   }
   function desenha() {
     const a = demo || S, st = demo ? (demo.fim ? "fim" : "rodando") : S.status;
     desenhaStats();
+    $("hud-titulo").textContent = titulo();
     $("estado").classList.toggle("on", st === "rodando");
     $("estado-txt").textContent = demo ? (demo.fim ? "Demo: fim" : "Demo") : { parado: "Parado", rodando: "Gravando", pausado: "Pausado", fim: "Finalizado" }[st];
     const play = $("bt-play");
     play.hidden = st === "fim" && !demo;
-    play.textContent = demo ? "Iniciar" : st === "rodando" ? "Pausar" : st === "pausado" ? "Voltar" : "Iniciar";
-    play.classList.toggle("pausa", !demo && st === "rodando");
-    $("bt-fim").hidden = !(st === "rodando" || st === "pausado") || (demo && demo.fim);
+    const ICO_PAUSA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1"/><rect x="13.8" y="5" width="4.2" height="14" rx="1"/></svg>';
+    const ICO_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5Z"/></svg>';
+    if (!demo && st === "rodando") { play.innerHTML = ICO_PAUSA; play.setAttribute("aria-label", "Pausar"); }
+    else if (!demo && st === "pausado") { play.innerHTML = ICO_PLAY; play.setAttribute("aria-label", "Retomar"); }
+    else { play.textContent = "Iniciar"; play.removeAttribute("aria-label"); }
+    $("bt-foto").hidden = !!demo || !(st === "rodando" || st === "pausado");
+    $("bt-fim").hidden = demo ? demo.fim : st !== "pausado";
     $("bt-demo").hidden = !!demo || S.status === "rodando";
     $("perto").hidden = !(st === "rodando" || st === "pausado") || !!demo;
     if (!$("perto").hidden) preencheBares();
@@ -254,75 +419,171 @@
     $("resumo").hidden = !fim;
     if (fim) {
       const t = tempo(), n = a.checks.length;
-      $("r-titulo").textContent = demo ? "Baratona da Ceci (demo)" : "Baratona da Ceci";
-      $("r-sub").textContent = demo ? "28/11 · 13h · Pinheiros e Vila Madalena" : `${new Date(S.inicioEm || Date.now()).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · ${hhmm(t)} de Baratona`;
+      $("r-titulo").textContent = demo ? `${nomeAtividade(13)} (demo)` : titulo();
+      $("r-sub").textContent = (demo ? "28/11 · Pinheiros e Vila Madalena" : `${new Date(S.inicioEm || Date.now()).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · ${hhmm(t)} de Baratona`) + ` · Pace fofoca ${pace(t, n)}`;
       $("r-tempo").textContent = relogio(t); $("r-dist").textContent = km(demo ? demo.metros : S.metros);
-      $("r-bares").textContent = `${n}/${TOTAL}`; $("r-pace").textContent = pace(t, n);
+      $("r-bares").textContent = `${n}/${TOTAL}`; $("r-drinks").textContent = a.drinks.length;
+      const rc = $("r-conq"); rc.textContent = "";
+      CONQ.filter((c) => (a.conq || {})[c.id]).forEach((c) => { const im = document.createElement("img"); im.src = conqImg(c.id); im.alt = c.nome; im.title = c.nome; rc.append(im); });
       const g = $("r-grade"); g.textContent = "";
       a.checks.forEach((c) => { const im = document.createElement("img"); im.src = c.selfie; im.alt = `Selfie no ${c.nome}`; im.loading = "lazy"; g.append(im); });
       $("kudos-n").textContent = a.kudos ? `${a.kudos} ${a.kudos === 1 ? "saúde" : "saúdes"}` : "";
     }
   }
 
-  /* ---------- imagem da atividade (1080x1920) ---------- */
+  /* ---------- imagem da atividade (1080x1920, estilo flyover) ---------- */
   const carrega = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
   function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+  // satélite inclinado fora da tela; devolve o canvas e a projeção lng/lat -> pixel
+  function fundoSatelite(coords, W, H) {
+    return new Promise((resolve) => {
+      if (typeof maplibregl === "undefined") return resolve(null);
+      const box = document.createElement("div");
+      box.style.cssText = `position:fixed;left:-20000px;top:0;width:${W / 2}px;height:${H / 2}px;pointer-events:none`;
+      document.body.append(box);
+      let m, feito = false;
+      const fim = (r) => { if (feito) return; feito = true; clearTimeout(t); try { m && m.remove(); } catch {} box.remove(); resolve(r); };
+      const t = setTimeout(() => fim(captura()), 20000);
+      function captura() {
+        try {
+          const c = m.getCanvas(), out = document.createElement("canvas"); out.width = W; out.height = H;
+          out.getContext("2d").drawImage(c, 0, 0, W, H);
+          out.toDataURL("image/png").slice(0, 32); // erro se o canvas ficou "sujo" (CORS)
+          const z = m.getZoom(), cen = m.getCenter(), b = m.getBearing(), p = m.getPitch();
+          return { canvas: out, projeta: (ll) => { const q = m.project(ll); return [q.x * 2, q.y * 2]; }, cam: { z, cen, b, p } };
+        } catch { return null; }
+      }
+      try {
+        m = new maplibregl.Map({ container: box, style: ESTILO, pixelRatio: 2, interactive: false, attributionControl: false, preserveDrawingBuffer: true, fadeDuration: 0, maxPitch: 70 });
+      } catch { return fim(null); }
+      m.on("error", () => {});
+      m.once("load", () => {
+        const b = new maplibregl.LngLatBounds(); coords.forEach((c) => b.extend(c));
+        const cam = m.cameraForBounds(b, { padding: { top: 380, bottom: 170, left: 50, right: 50 }, bearing: -15 });
+        m.jumpTo({ center: cam ? cam.center : coords[0], zoom: cam ? cam.zoom : 15, bearing: -15, pitch: 55 });
+        // com a inclinação o traçado cresce embaixo: afasta até caber na área livre
+        const cabe = () => coords.every((c) => { const q = m.project(c); return q.x > 30 && q.x < W / 2 - 30 && q.y > 340 && q.y < H / 2 - 150; });
+        for (let i = 0; i < 12 && !cabe(); i++) m.jumpTo({ zoom: m.getZoom() - 0.15 });
+        m.once("idle", () => fim(captura()));
+      });
+    });
+  }
+
   async function imagem() {
+    const a = demo || S, W = 1080, H = 1920;
+    const trilha = a.trilha.length > 1 ? a.trilha : PLANO;
+    await Promise.all(['700 120px "Barlow"', '600 44px "Barlow"', '500 36px "Barlow"'].map((f) => document.fonts.load(f))).catch(() => {});
+    const fundo = await fundoSatelite(trilha, W, H);
+    if (!fundo) return imagemPapel();
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.drawImage(fundo.canvas, 0, 0);
+    // escurece o topo e a base para o texto
+    let gr = g.createLinearGradient(0, 0, 0, 860);
+    gr.addColorStop(0, "rgba(0,0,0,.66)"); gr.addColorStop(0.55, "rgba(0,0,0,.32)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, W, 860);
+    gr = g.createLinearGradient(0, H - 380, 0, H);
+    gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(0,0,0,.62)");
+    g.fillStyle = gr; g.fillRect(0, H - 380, W, 380);
+
+    // trajeto
+    const pts = trilha.map(fundo.projeta);
+    g.lineCap = "round"; g.lineJoin = "round";
+    g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+    g.strokeStyle = "rgba(42,14,0,.55)"; g.lineWidth = 24; g.stroke();
+    g.strokeStyle = LARANJA; g.lineWidth = 14; g.stroke();
+
+    // selfies nos bares
+    const fotos = await Promise.all(a.checks.map((ck) => carrega(ck.selfie)));
+    a.checks.forEach((ck, i) => {
+      const b = BARS.find((x) => x.id === ck.id); if (!b) return;
+      const [x, y] = fundo.projeta([b.lon, b.lat]), r = 30, im = fotos[i];
+      g.save(); g.shadowColor = "rgba(0,0,0,.5)"; g.shadowBlur = 10; g.shadowOffsetY = 3;
+      g.beginPath(); g.arc(x, y, r + 6, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.restore();
+      g.save(); g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.clip();
+      if (im) { const s = Math.min(im.width, im.height); g.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, x - r, y - r, r * 2, r * 2); }
+      else { g.fillStyle = LARANJA; g.fillRect(x - r, y - r, r * 2, r * 2); }
+      g.restore();
+    });
+    // ponto final: laranja com aro branco
+    const [ex, ey] = pts[pts.length - 1];
+    g.save(); g.shadowColor = "rgba(0,0,0,.5)"; g.shadowBlur = 10;
+    g.beginPath(); g.arc(ex, ey, 24, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.restore();
+    g.beginPath(); g.arc(ex, ey, 15, 0, Math.PI * 2); g.fillStyle = LARANJA; g.fill();
+
+    // marca, título e números
+    g.save(); g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 8; g.shadowOffsetY = 2;
+    const marcaImg = await carrega("/straga-marca-branca.svg");
+    if (marcaImg) { const mh = 78, mw = (marcaImg.width / marcaImg.height) * mh; g.drawImage(marcaImg, (W - mw) / 2, 130, mw, mh); }
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+    g.font = '600 44px "Barlow", system-ui, sans-serif';
+    g.fillText(demo ? nomeAtividade(13) : titulo(), W / 2, 300);
+    const t = tempo(), n = a.checks.length, m = demo ? demo.metros : S.metros;
+    const [tv, tu] = tempoCurto(t);
+    [["Tempo", tv, tu], ["Drinks", String(a.drinks.length), `em ${n} ${n === 1 ? "bar" : "bares"}`], ["Distância", kmN(m), "km"]].forEach(([k, v, u], i) => {
+      const x = (W / 6) * (1 + i * 2);
+      g.font = '500 38px "Barlow", system-ui, sans-serif'; g.fillText(k, x, 420);
+      g.font = '700 118px "Barlow", system-ui, sans-serif'; g.fillText(v, x, 540);
+      g.font = '700 42px "Barlow", system-ui, sans-serif'; g.fillText(u, x, 604);
+    });
+    // rodapé
+    g.textAlign = "left"; g.font = '700 36px "Barlow", system-ui, sans-serif';
+    g.fillText(`${n} de ${TOTAL} bares · Pace fofoca ${pace(t, n)}`, 60, H - 120);
+    g.font = '500 30px "Barlow", system-ui, sans-serif';
+    g.fillText("28/11 · Baratona da Ceci · Pinheiros e Vila Madalena", 60, H - 72);
+    g.restore();
+    // conquistas desbloqueadas
+    const ganhas = CONQ.filter((cq) => (a.conq || {})[cq.id]).slice(0, 8);
+    const imgs = await Promise.all(ganhas.map((cq) => carrega(conqImg(cq.id))));
+    const lado = 96, gap = 14;
+    imgs.forEach((im, i) => {
+      if (!im) return;
+      const x = 60 + i * (lado + gap), y = H - 300;
+      g.save(); g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 12; g.shadowOffsetY = 4;
+      g.drawImage(im, x, y, lado, lado); g.restore();
+    });
+    g.textAlign = "right"; g.font = '500 18px "Barlow", system-ui, sans-serif'; g.fillStyle = "rgba(255,255,255,.75)";
+    g.fillText(CREDITO, W - 24, H - 24);
+    return new Promise((ok) => c.toBlob(ok, "image/png"));
+  }
+
+  // plano B (sem mapa): trajeto desenhado sobre o papel
+  async function imagemPapel() {
     const a = demo || S, W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
     const g = c.getContext("2d");
-    await Promise.all(['italic 900 104px "Barlow"', '700 30px "DM Sans"', '30px "Permanent Marker"'].map((f) => document.fonts.load(f))).catch(() => {});
     g.fillStyle = "#F5E9D4"; g.fillRect(0, 0, W, H);
     g.fillStyle = "rgba(42,29,34,.06)"; for (let y = 0; y < H; y += 14) for (let x = (y / 14) % 2 ? 7 : 0; x < W; x += 14) g.fillRect(x, y, 2, 2);
-    const logo = await carrega("/arte/logo-vermelho.webp");
-    if (logo) g.drawImage(logo, 60, 60, 300, 300 * logo.height / logo.width);
-    const ico = await carrega("/straga-icone.svg");
-    if (ico) g.drawImage(ico, 610, 80, 120, 120);
-    g.save(); g.translate(1010, 150); g.rotate(-0.07); g.textAlign = "right";
-    g.font = 'italic 900 104px "Barlow", "Arial Black", sans-serif'; g.fillStyle = "#FC4C02"; g.fillText("STRAGA", 0, 40);
-    g.font = '34px "Permanent Marker", cursive'; g.fillStyle = "#2A1D22"; g.fillText("o Strava da Baratona", -6, 100); g.restore();
-    // stats
+    const marcaImg = await carrega("/straga-marca.svg");
+    if (marcaImg) { const mh = 90, mw = (marcaImg.width / marcaImg.height) * mh; g.drawImage(marcaImg, (W - mw) / 2, 90, mw, mh); }
     const t = tempo(), n = a.checks.length, m = demo ? demo.metros : S.metros;
-    const st = [["TEMPO", relogio(t)], ["DISTÂNCIA", km(m)], ["BARES", `${n}/${TOTAL}`], ["PACE FOFOCA", pace(t, n)]];
-    g.fillStyle = "#2A1D22"; rr(g, 66, 406, 948, 170, 26); g.fill();
-    g.fillStyle = "#FCF6EA"; rr(g, 60, 400, 948, 170, 26); g.fill(); g.lineWidth = 4; g.strokeStyle = "#2A1D22"; g.stroke();
-    st.forEach(([k, v], i) => {
-      const x = 60 + 948 / 8 + (i * 948) / 4; g.textAlign = "center";
-      g.font = '700 22px "DM Sans", sans-serif'; g.fillStyle = "#6A5258"; g.fillText(k, x, 460);
-      g.font = '700 46px "DM Sans", sans-serif'; g.fillStyle = i === 0 ? "#D3213C" : "#2A1D22"; g.fillText(v, x, 524);
+    const [tv, tu] = tempoCurto(t);
+    g.fillStyle = "#242428"; g.textAlign = "center";
+    [["Tempo", tv, tu], ["Drinks", String(a.drinks.length), `em ${n} bares`], ["Distância", kmN(m), "km"]].forEach(([k, v, u], i) => {
+      const x = (W / 6) * (1 + i * 2);
+      g.font = '500 36px "Barlow", sans-serif'; g.fillText(k, x, 300);
+      g.font = '700 110px "Barlow", sans-serif'; g.fillText(v, x, 410);
+      g.font = '700 40px "Barlow", sans-serif'; g.fillText(u, x, 470);
     });
-    // trajeto (projeção própria sobre o papel)
-    const box = { x: 60, y: 620, w: 960, h: 640 };
-    g.fillStyle = "#FCF6EA"; rr(g, box.x, box.y, box.w, box.h, 26); g.fill(); g.lineWidth = 4; g.strokeStyle = "#2A1D22"; g.stroke();
-    const tr = a.trilha.length > 1 ? a.trilha : (PERCURSO.linha || []);
+    const box = { x: 60, y: 540, w: 960, h: 1220 };
+    const tr = a.trilha.length > 1 ? a.trilha : PLANO;
     const pts = [...tr, ...BARS.map((b) => [b.lon, b.lat])];
     const merc = ([lo, la]) => [lo, -Math.log(Math.tan(Math.PI / 4 + rad(la) / 2)) * 180 / Math.PI];
     const ms = pts.map(merc), xs = ms.map((p) => p[0]), ys = ms.map((p) => p[1]);
-    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), pad = 50;
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), pad = 60;
     const k = Math.min((box.w - pad * 2) / (x1 - x0 || 1), (box.h - pad * 2) / (y1 - y0 || 1));
     const ox = box.x + (box.w - (x1 - x0) * k) / 2, oy = box.y + (box.h - (y1 - y0) * k) / 2;
     const P = (ll) => { const [x, y] = merc(ll); return [ox + (x - x0) * k, oy + (y - y0) * k]; };
     g.lineCap = "round"; g.lineJoin = "round";
-    if (a.trilha.length > 1) {
-      g.beginPath(); a.trilha.map(P).forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
-      g.strokeStyle = "#2A1D22"; g.lineWidth = 14; g.stroke(); g.strokeStyle = "#FC4C02"; g.lineWidth = 8; g.stroke();
-    }
-    const feitos = new Set(a.checks.map((c) => c.id));
-    BARS.forEach((b) => { const [x, y] = P([b.lon, b.lat]); g.beginPath(); g.arc(x, y, feitos.has(b.id) ? 11 : 7, 0, Math.PI * 2); g.fillStyle = feitos.has(b.id) ? "#D3213C" : "#C9B9A3"; g.fill(); g.lineWidth = 3; g.strokeStyle = "#FCF6EA"; g.stroke(); });
-    // selfies
-    const fotos = await Promise.all(a.checks.slice(0, 15).map((c) => carrega(c.selfie)));
-    const cols = 5, lado = 150, gap = 26, gx = (W - (cols * lado + (cols - 1) * gap)) / 2;
-    fotos.forEach((im, i) => {
-      const x = gx + (i % cols) * (lado + gap), y = 1310 + Math.floor(i / cols) * (lado + gap);
-      g.save(); g.translate(x + lado / 2, y + lado / 2); g.rotate(((i * 37) % 7 - 3) * 0.012);
-      g.fillStyle = "#FCF6EA"; g.fillRect(-lado / 2 - 8, -lado / 2 - 8, lado + 16, lado + 16);
-      if (im) { const s = Math.min(im.width, im.height); g.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, -lado / 2, -lado / 2, lado, lado); }
-      g.restore();
-    });
-    if (a.checks.length > 15) { g.textAlign = "center"; g.font = '700 28px "DM Sans", sans-serif'; g.fillStyle = "#6A5258"; g.fillText(`+ ${a.checks.length - 15} bares`, W / 2, 1890); }
-    g.textAlign = "center"; g.font = '700 30px "DM Sans", sans-serif'; g.fillStyle = "#2A1D22";
-    if (a.checks.length <= 15) g.fillText("28/11 · Baratona da Ceci · Pinheiros", W / 2, 1880);
+    g.beginPath(); tr.map(P).forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+    g.strokeStyle = "#2A1D22"; g.lineWidth = 16; g.stroke(); g.strokeStyle = LARANJA; g.lineWidth = 10; g.stroke();
+    const feitos = new Set(a.checks.map((ck) => ck.id));
+    BARS.forEach((b) => { const [x, y] = P([b.lon, b.lat]); g.beginPath(); g.arc(x, y, feitos.has(b.id) ? 12 : 8, 0, Math.PI * 2); g.fillStyle = feitos.has(b.id) ? LARANJA : "#C9B9A3"; g.fill(); g.lineWidth = 3; g.strokeStyle = "#fff"; g.stroke(); });
+    g.textAlign = "center"; g.font = '700 32px "Barlow", sans-serif'; g.fillStyle = "#242428";
+    g.fillText(`Pace fofoca ${pace(t, n)} · 28/11 · Baratona da Ceci`, W / 2, H - 80);
     return new Promise((ok) => c.toBlob(ok, "image/png"));
   }
+
   $("bt-baixar").addEventListener("click", async () => {
     const bt = $("bt-baixar"); bt.disabled = true; const r = bt.textContent; bt.textContent = "Gerando…";
     try {
@@ -331,7 +592,7 @@
       const v = document.createElement("div"); v.className = "previa"; v.setAttribute("role", "dialog"); v.setAttribute("aria-label", "Imagem da atividade");
       const im = document.createElement("img"); im.src = url; im.alt = "Sua atividade no Straga";
       const linha = document.createElement("div"); linha.className = "linha";
-      const a = document.createElement("a"); a.className = "bt pink"; a.href = url; a.download = nome; a.textContent = "⬇ Baixar imagem"; linha.append(a);
+      const a = document.createElement("a"); a.className = "bt laranja"; a.href = url; a.download = nome; a.textContent = "⬇ Baixar imagem"; linha.append(a);
       if (navigator.canShare && navigator.canShare({ files: [arq] })) { const s = document.createElement("button"); s.className = "bt"; s.type = "button"; s.textContent = "Compartilhar"; s.onclick = () => navigator.share({ files: [arq] }).catch(() => {}); linha.append(s); }
       const p = document.createElement("p"); p.textContent = "No celular, dá pra segurar a imagem para salvar nas fotos.";
       const f = document.createElement("button"); f.className = "fecha"; f.type = "button"; f.textContent = "Fechar";
@@ -344,8 +605,9 @@
 
   /* ---------- início ---------- */
   iniciaMapa();
-  if (S.status === "rodando") { ligaGps(); acordado(true); roda(); aviso("Atividade em andamento. O cronômetro não parou."); }
+  vista(S.status === "rodando" || S.status === "pausado" ? "numeros" : "mapa");
+  desenhaConquistas();
+  if (S.status === "rodando") { segue = true; ligaGps(); acordado(true); roda(); aviso("Atividade em andamento. O cronômetro não parou."); }
   else if (S.status === "pausado") aviso("Atividade pausada. Aperte Voltar para continuar.");
   desenha();
-  setTimeout(() => { const ult = S.trilha[S.trilha.length - 1]; if (ult) posicaoEu(ult); }, 1500);
 })();
