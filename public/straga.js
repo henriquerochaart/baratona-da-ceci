@@ -739,7 +739,7 @@
     const lista = turma.slice().sort((a, b) => b.bares - a.bares || b.conq - a.conq || b.metros - a.metros || String(a.nome).localeCompare(b.nome, "pt"));
     const ol = $("ranking"); ol.textContent = "";
     lista.slice(0, 40).forEach((p, k) => {
-      const li = document.createElement("li"); if (p.cod === meuCod) li.className = "eu";
+      const li = document.createElement("li"); if (p.cod === meuCod) li.className = "sou-eu";
       const pos = document.createElement("span"); pos.className = "pos"; pos.textContent = `${k + 1}º`;
       const av = document.createElement("span"); av.className = "av" + (p.status === "rodando" && p.ha < 300 ? " vivo" : ""); av.textContent = inicial(p.nome);
       const tx = document.createElement("div"); const b = document.createElement("b"); b.textContent = p.cod === meuCod ? `${p.nome} (você)` : p.nome;
