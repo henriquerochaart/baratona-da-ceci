@@ -9,7 +9,7 @@
 <meta property="og:title" content="Straga · O Strava da Baratona">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Baratona da Ceci">
-<meta property="og:description" content="Cronômetro, quilômetros... eu já não sei mais nada. Bebi demais! Sábado, 28/11.">
+<meta property="og:description" content="Cronômetro, quilômetros... eu já não sei mais nada. Bebi demais!">
 <meta name="description" content="O Strava da Baratona da Ceci: cronômetro, quilômetros, drinks, selfie em cada bar e conquistas.">
 <meta property="og:image" content="https://baratona-da-ceci.vercel.app/arte/straga-capa-laranja.png">
 <meta property="og:image:secure_url" content="https://baratona-da-ceci.vercel.app/arte/straga-capa-laranja.png">
@@ -88,7 +88,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .eu{width:22px;height:22px;border-radius:50%;background:var(--laranja);border:5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.55)}
 
 /* tela de números (a gravação do Strava: tempo, drinks, km) */
-.numeros{position:absolute;inset:0;z-index:3;background:#fff;display:flex;flex-direction:column;padding:14px 16px 104px;text-align:center}
+.numeros{position:absolute;inset:0;z-index:3;background:#fff;display:flex;flex-direction:column;padding:14px 16px 120px;text-align:center}
 .tela[data-vista="mapa"] .numeros{display:none}
 .tela[data-vista="numeros"] .hud,.tela[data-vista="numeros"] .bt-centro,.tela[data-vista="numeros"] .demo-selo{display:none}
 .n-topo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:6px}
@@ -121,17 +121,18 @@ h1,h2,h3{margin:0;text-wrap:balance}
 html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 .app.cheia{position:fixed;inset:0;z-index:9500;border:0;border-radius:0;box-shadow:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .app.cheia .tela{height:100vh;height:100dvh;min-height:0}
+@media (min-width:640px){.app.cheia{left:50%;right:auto;width:480px;transform:translateX(-50%);box-shadow:0 0 0 100vmax rgba(20,20,24,.88)}}
 .bt-voltar{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:7;width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.94);color:var(--grafite);display:none;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer}
 .bt-voltar svg{width:22px;height:22px}
 .app.cheia .bt-voltar{display:grid}
-.bt-cheia{position:absolute;right:10px;top:10px;z-index:5;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(255,255,255,.94);color:var(--grafite);font:700 19px/1 var(--f-app);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
-.tela[data-vista="numeros"] .bt-cheia{top:auto;right:auto;left:10px;bottom:30px}
+.bt-cheia{position:absolute;left:10px;top:10px;z-index:5;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(255,255,255,.94);color:var(--grafite);font:700 19px/1 var(--f-app);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.tela[data-vista="numeros"] .bt-cheia{top:auto;left:6px;bottom:32px;width:36px;height:36px;font-size:17px}
 .app.cheia .bt-cheia{display:none}
 .app.cheia .hud{padding-top:calc(18px + env(safe-area-inset-top,0px))}
 .app.cheia .numeros{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 .app.cheia .n-topo{padding-left:48px}
 .app.cheia .barra-ctl{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
-.app.cheia .toast{top:calc(60px + env(safe-area-inset-top,0px))}
+.app.cheia .toast{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 .app.cheia .folha,.app.cheia .resumo{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 
 /* turma: nome, amigos no mapa e ranking */
@@ -162,12 +163,12 @@ html.sem-rolagem,html.sem-rolagem body{overflow:hidden}
 .amigo span{background:rgba(255,255,255,.95);color:var(--grafite);border-radius:999px;padding:2px 8px;font:700 12px var(--f-app);white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 
 /* conquista desbloqueada */
-.toast{position:absolute;left:12px;right:12px;top:12px;z-index:6;display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 10px 28px rgba(0,0,0,.35);animation:entra .35s ease-out}
+.toast{position:absolute;left:12px;right:12px;bottom:112px;z-index:6;display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 10px 28px rgba(0,0,0,.35);animation:entra .35s ease-out}
 .toast img{width:56px;height:56px;border-radius:12px;flex:none}
 .toast span{display:block;font:700 11px var(--f-app);letter-spacing:.08em;text-transform:uppercase;color:var(--laranja)}
 .toast b{display:block;font:800 18px/1.15 var(--f-app);color:var(--grafite)}
 .toast small{display:block;font:500 13px/1.25 var(--f-app);color:var(--cinza)}
-@keyframes entra{from{transform:translateY(-16px) scale(.96);opacity:0}}
+@keyframes entra{from{transform:translateY(16px) scale(.96);opacity:0}}
 
 .credito{margin:0;padding:6px 16px 0;font:500 10px var(--f-app);color:#A5A5B0;text-align:right}
 .folha{padding:10px 16px 16px;display:flex;flex-direction:column;gap:14px}
@@ -252,7 +253,7 @@ html body .som{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));righ
       <article class="passo"><span class="n">2</span><h3>Selfie em cada bar, + a cada drink</h3><p>Chegou num bar? Toque na câmera, tire a selfie e o bar fica marcado no mapa com a sua cara. Pediu um drink? Aperte o +. Conforme a noite anda, as conquistas vão aparecendo.</p></article>
       <article class="passo"><span class="n">3</span><h3>Finalize e compartilhe</h3><p>No último bar, aperte Finalizar: sai a sua atividade com tempo, distância, drinks, bares, selfies e as conquistas que você desbloqueou. Baixe a imagem e poste.</p></article>
     </div>
-    <p class="obs">Pode bloquear o celular: o tempo não para e, quando você abrir o Straga de novo, ele completa o trajeto pelas ruas. Se você entrou com seu telefone no site, cada checkpoint também conta no check-in da Baratona (abre no dia 28/11).</p>
+    <p class="obs">Pode bloquear o celular: o tempo não para e, quando você abrir o Straga de novo, ele completa o trajeto pelas ruas. Se você entrou com seu telefone no site, cada checkpoint também conta no check-in da Baratona.</p>
   </section>
 
   <section aria-labelledby="t-app">

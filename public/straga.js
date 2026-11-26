@@ -45,6 +45,8 @@
     const s = Math.floor(ms / 1000);
     return s < 3600 ? [`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`, "min"] : [`${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}`, "h"];
   };
+  // data da atividade (dd/mm): o dia em que ela começou; na demonstração, hoje
+  const dataAtividade = () => new Date(!demo && S.inicioEm ? S.inicioEm : Date.now()).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
   const kmN = (m) => (m / 1000).toFixed(2).replace(".", ",");
   const km = (m) => kmN(m) + " km";
   const hhmm = (ms) => { const m = Math.floor(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m} min`; };
@@ -480,7 +482,7 @@
     if (fim) {
       const t = tempo(), n = a.checks.length;
       $("r-titulo").textContent = demo ? "Baratona da Ceci (demo)" : "Baratona da Ceci";
-      $("r-sub").textContent = (demo ? "28/11 · Pinheiros e Vila Madalena" : `${new Date(S.inicioEm || Date.now()).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · ${hhmm(t)} de Baratona`);
+      $("r-sub").textContent = (demo ? `${dataAtividade()} · Pinheiros e Vila Madalena` : `${dataAtividade()} · ${hhmm(t)} de Baratona`);
       $("r-tempo").textContent = relogio(t); $("r-dist").textContent = km(demo ? demo.metros : S.metros);
       $("r-bares").textContent = `${n}/${TOTAL}`; $("r-drinks").textContent = a.drinks.length;
       const rc = $("r-conq"); rc.textContent = "";
@@ -601,7 +603,7 @@
     g.textAlign = "left"; g.font = '700 36px "Barlow", system-ui, sans-serif';
     g.fillText(`${n} de ${TOTAL} bares`, 60, H - 120);
     g.font = '500 30px "Barlow", system-ui, sans-serif';
-    g.fillText("28/11 · Baratona da Ceci · Pinheiros e Vila Madalena", 60, H - 72);
+    g.fillText(`${dataAtividade()} · Baratona da Ceci · Pinheiros e Vila Madalena`, 60, H - 72);
     g.restore();
     // conquistas desbloqueadas
     const ganhas = CONQ.filter((cq) => (a.conq || {})[cq.id]).slice(0, 8);
@@ -650,7 +652,7 @@
     const feitos = new Set(a.checks.map((ck) => ck.id));
     BARS.forEach((b) => { const [x, y] = P([b.lon, b.lat]); g.beginPath(); g.arc(x, y, feitos.has(b.id) ? 12 : 8, 0, Math.PI * 2); g.fillStyle = feitos.has(b.id) ? LARANJA : "#C9B9A3"; g.fill(); g.lineWidth = 3; g.strokeStyle = "#fff"; g.stroke(); });
     g.textAlign = "center"; g.font = '700 32px "Barlow", sans-serif'; g.fillStyle = "#242428";
-    g.fillText(`${n} de ${TOTAL} bares · 28/11 · Baratona da Ceci`, W / 2, H - 80);
+    g.fillText(`${n} de ${TOTAL} bares · ${dataAtividade()} · Baratona da Ceci`, W / 2, H - 80);
     return new Promise((ok) => c.toBlob(ok, "image/png"));
   }
 
